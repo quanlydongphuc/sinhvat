@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Thám tử Nhận dạng Động vật AI</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #28a745;
+            --background-color: #f8f9fa;
+            --text-color: #343a40;
+            --font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        /* Container của Webcam (Đảm bảo hiển thị tốt trên Mobile) */
+        #webcam-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        canvas {
+            border: 3px solid var(--primary-color);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
+        }
+
+        /* Phản hồi Nhận dạng (Label Container) */
+        #label-container {
+            margin: 15px auto;
+            max-width: 350px;
+            text-align: left;
+            padding: 10px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        
+        #label-container div {
+            padding: 5px 0;
+            border-bottom: 1px dashed #ccc;
+            font-size: 0.9em;
+        }
+
+        /* Khu vực Thông tin Khoa học */
+        .phan-hoi-khoa-hoc {
+            background-color: white;
+            border: 1px solid var(--primary-color);
+            border-left: 5px solid var(--primary-color);
+            padding: 15px;
+            margin-top: 30px;
+            text-align: left;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .phan-hoi-khoa-hoc h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 1.2em;
+        }
+        
+        #khoa-hoc-info {
+            line-height: 1.6;
+            font-size: 1em;
+        }
+
+        /* Mobile adjustments (CSS Media Queries) */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            button {
+                width: 100%;
+                font-size: 1em;
+            }
+            #webcam-container canvas {
+                width: 100%;
+                height: auto;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>🔍 Thám tử Nhận dạng Động vật</h1>
+    <p>Khoa học Lớp 4 - Chân trời sáng tạo</p>
+
+    <button type="button" onclick="init()">Bắt đầu Webcam</button>
+    <div id="webcam-container"></div>
+    <div id="label-container"></div>
+    
+    <div class="phan-hoi-khoa-hoc">
+        <h2>💡 Thông tin Khoa học về Loài vật</h2>
+        <p id="khoa-hoc-info">Nhấn "Bắt đầu Webcam" và cho AI thấy một con vật để bắt đầu phân tích...</p>
+    </div>
+
+    <script type="text/javascript">
+        // LƯU Ý QUAN TRỌNG: URL ĐÃ ĐƯỢC THAY THẾ BẰNG URL MÔ HÌNH CỦA BẠN
+        const URL = "https://teachablemachine.withgoogle.com/models/I2s7iGcQr/"; 
+
+        let model, webcam, labelContainer, maxPredictions;
+
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
+
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            const flip = true; 
+            webcam = new tmImage.Webcam(300, 300, flip); 
+            await webcam.setup(); 
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            document.getElementById("webcam-container").innerHTML = '';
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = '';
+            for (let i = 0; i < maxPredictions; i++) { 
+                labelContainer.appendChild(document.createElement("div"));
+            }
+        }
+
+        function loop() {
+            webcam.update(); 
+            predict();
+            window.requestAnimationFrame(loop);
+        }
+
+        async function predict() {
+            const prediction = await model.predict(webcam.canvas);
+            let highestPrediction = { className: "Chưa rõ", probability: 0 };
+
+            for (let i = 0; i < maxPredictions; i++) {
+                const probabilityPercent = (prediction[i].probability * 100).toFixed(1) + "%";
+                labelContainer.childNodes[i].innerHTML = `${prediction[i].className}: <strong>${probabilityPercent}</strong>`;
+                
+                if (prediction[i].probability > highestPrediction.probability) {
+                    highestPrediction = prediction[i];
+                }
+            }
+            
+            // --- PHẦN LUẬT LOGIC KHOA HỌC MỚI (JavaScript) ---
+            const infoElement = document.getElementById("khoa-hoc-info");
+            
+            if (highestPrediction.probability > 0.7) { 
+                let classInfo = "";
+                const animalName = highestPrediction.className;
+
+                switch (animalName) {
+                    case "bò":
+                    case "trâu":
+                    case "heo":
+                        classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (trừ heo). Chức năng: Là sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).`;
+                        break;
+                    case "chó":
+                    case "mèo":
+                        classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ. Chức năng: Là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn khác).`;
+                        break;
+                    case "gà":
+                    case "vịt":
+                    case "chim":
+                        classInfo = `Thuộc lớp **Chim** (Lớp Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ. Chức năng: Sinh vật tiêu thụ bậc 1 hoặc 2 (tùy theo thức ăn).`;
+                        break;
+                    case "cá":
+                        classInfo = `Thuộc lớp **Cá**. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Đa dạng (sinh vật tiêu thụ, mắt xích quan trọng trong chuỗi thức ăn dưới nước).`;
+                        break;
+                    case "ếch":
+                        classInfo = `Thuộc lớp **Lưỡng cư**. Đặc điểm: Da trần ẩm ướt, có giai đoạn sống dưới nước (nòng nọc) và trên cạn. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).`;
+                        break;
+                    case "rắn":
+                    case "kì nhông":
+                    case "thằn lằn":
+                        classInfo = `Thuộc lớp **Bò sát**. Đặc điểm: Da khô có vảy, là động vật máu lạnh, đẻ trứng. Chức năng: Thường là sinh vật tiêu thụ bậc 2 hoặc 3 (ăn côn trùng/động vật nhỏ).`;
+                        break;
+                    case "bướm":
+                    case "gián":
+                    case "kiến":
+                    case "ong":
+                        classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Cơ thể chia 3 phần (đầu, ngực, bụng), có 6 chân. Chức năng: Đa dạng (thụ phấn, phân hủy, sinh vật tiêu thụ bậc 1/2).`;
+                        break;
+                    case "chuột":
+                        classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật tiêu thụ bậc 1/2 (ăn hạt, thực vật, đôi khi là côn trùng).`;
+                        break;
+                    case "sâu":
+                        classInfo = `Thuộc lớp **Côn trùng** (Giai đoạn ấu trùng). Đặc điểm: Cơ thể mềm, di chuyển bằng cách bò, có thể hóa nhộng. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn lá cây, thực vật).`;
+                        break;
+                    default:
+                        classInfo = `Đây là **${animalName.toUpperCase()}** - Một loài vật thú vị! Hãy cùng tìm hiểu thêm về nó nhé.`;
+                        break;
+                }
+
+                infoElement.innerHTML = `**Loài vật: ${animalName.toUpperCase()}**<br>` + classInfo;
+                
+            } else {
+                 infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
+            }
+            // ----------------------------------------------------------------------
+        }
+    </script>
+
+</body>
+</html>
