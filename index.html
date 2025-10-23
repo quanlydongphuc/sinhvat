@@ -109,6 +109,60 @@
             font-size: 1em;
         }
 
+        /* Popup styles */
+        .popup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .popup-overlay.show {
+            display: flex;
+        }
+        .popup {
+            background: #fff;
+            border-radius: 12px;
+            max-width: 420px;
+            width: 100%;
+            padding: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            text-align: left;
+            animation: popupIn .18s ease-out;
+        }
+        @keyframes popupIn {
+            from { transform: translateY(12px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .popup h3 {
+            margin: 0 0 8px 0;
+            color: var(--primary-color);
+        }
+        .popup .percent {
+            font-weight: 700;
+            color: var(--secondary-color);
+            margin-left: 6px;
+        }
+        .popup .info {
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        .popup .actions {
+            margin-top: 14px;
+            text-align: right;
+        }
+        .popup .btn-close {
+            background: #6c757d;
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
         @media (max-width: 600px) {
             body {
                 padding: 10px;
@@ -121,6 +175,7 @@
                 width: 100%;
                 height: auto;
             }
+            .popup { padding: 14px; }
         }
 
     </style>
@@ -144,8 +199,19 @@
         <p id="khoa-hoc-info">Nhấn "Bắt đầu" và cho AI thấy một con vật để bắt đầu phân tích...</p>
     </div>
 
+    <!-- Popup overlay -->
+    <div id="popup-overlay" class="popup-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="popup" id="popup">
+            <h3 id="popup-title">LOÀI: ??? <span class="percent" id="popup-percent"></span></h3>
+            <div class="info" id="popup-info"></div>
+            <div class="actions">
+                <button class="btn-close" id="popup-close">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <script type="text/javascript">
-        // URL MÔ HÌNH (giữ nguyên)
+        // URL MÔ HÌNH
         const URL = "https://teachablemachine.withgoogle.com/models/I2s7iGcQr/"; 
 
         let model = null;
@@ -161,6 +227,23 @@
         // controls
         const startBtn = document.getElementById('start-button');
         startBtn.addEventListener('click', () => startCamera(currentFacingMode));
+
+        // popup elements
+        const popupOverlay = document.getElementById('popup-overlay');
+        const popupTitle = document.getElementById('popup-title');
+        const popupPercent = document.getElementById('popup-percent');
+        const popupInfo = document.getElementById('popup-info');
+        const popupClose = document.getElementById('popup-close');
+
+        popupClose.addEventListener('click', hidePopup);
+        popupOverlay.addEventListener('click', (e) => {
+            if (e.target === popupOverlay) hidePopup();
+        });
+
+        // debounce/show control to avoid spamming popups
+        let lastShownKey = null;
+        let lastShownTime = 0;
+        const POPUP_MIN_INTERVAL_MS = 4000; // ít nhất 4s giữa hai popup cùng loài
 
         // Tải model (1 lần)
         async function ensureModelLoaded() {
@@ -193,7 +276,6 @@
                     tmpStream.getTracks().forEach(t => t.stop());
                     devices = await navigator.mediaDevices.enumerateDevices();
                 } catch (err) {
-                    // user có thể từ chối quyền; tiếp tục với devices hiện tại
                     console.warn('Permission request failed:', err);
                 }
             }
@@ -252,7 +334,6 @@
                         return;
                     } catch (err) {
                         console.warn('getUserMedia với deviceId thất bại, chuyển sang facingMode:', err);
-                        // tiếp tục để dùng facingMode fallback
                     }
                 }
 
@@ -304,63 +385,67 @@
 
         // Bản đồ thông tin dùng key không dấu để tránh mismatch
         const infoMap = {
-            // bò / bo
-            "bò": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
             "bo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
-            // trâu / trau
-            "trâu": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
+            "bò": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
             "trau": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
-            // heo
+            "trâu": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
             "heo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, da dày, mõm to. Chức năng: Sinh vật ăn tạp.",
-            // chó / cho
-            "chó": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn hỗn hợp).",
             "cho": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn hỗn hợp).",
-            // mèo / meo
-            "mèo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2.",
+            "chó": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn hỗn hợp).",
             "meo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2.",
-            // chuột / chuot
-            "chuột": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật ăn tạp, đóng vai trò tiêu thụ bậc 1/2.",
+            "mèo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2.",
             "chuot": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật ăn tạp, đóng vai trò tiêu thụ bậc 1/2.",
-            // gà/ga
-            "gà": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
+            "chuột": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật ăn tạp, đóng vai trò tiêu thụ bậc 1/2.",
             "ga": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
-            // vịt/vit
-            "vịt": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
+            "gà": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
             "vit": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
-            // chim
+            "vịt": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
             "chim": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có cánh và mỏ. Chức năng: Đa dạng, từ thụ phấn đến tiêu thụ bậc 2.",
-            // cá/ca
-            "cá": "Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Mắt xích quan trọng trong chuỗi thức ăn dưới nước.",
             "ca": "Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Mắt xích quan trọng trong chuỗi thức ăn dưới nước.",
-            // ếch/ech
-            "ếch": "Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn nòng nọc. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).",
+            "cá": "Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Mắt xích quan trọng trong chuỗi thức ăn dưới nước.",
             "ech": "Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn nòng nọc. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).",
-            // rắn/ran
-            "rắn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, động vật máu lạnh, không chân. Chức năng: Sinh vật tiêu thụ bậc 2/3.",
+            "ếch": "Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn nòng nọc. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).",
             "ran": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, động vật máu lạnh, không chân. Chức năng: Sinh vật tiêu thụ bậc 2/3.",
-            // kì nhông / ki nhong / kinong
-            "kì nhông": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            "ki nhong": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            "rắn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, động vật máu lạnh, không chân. Chức năng: Sinh vật tiêu thụ bậc 2/3.",
             "kinhong": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            // thằn lằn / than lan
-            "thằn lằn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            "than lan": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            "kì nhông": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
             "thanlan": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            // bướm / buom
-            "bướm": "Thuộc lớp Côn trùng. Đặc điểm: Có cánh lớn, trải qua biến thái. Chức năng: Thụ phấn.",
+            "thằn lằn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
             "buom": "Thuộc lớp Côn trùng. Đặc điểm: Có cánh lớn, trải qua biến thái. Chức năng: Thụ phấn.",
-            // ong
+            "bướm": "Thuộc lớp Côn trùng. Đặc điểm: Có cánh lớn, trải qua biến thái. Chức năng: Thụ phấn.",
             "ong": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành đàn, thụ phấn. Chức năng: Thụ phấn và thu mật.",
-            // kiến / kien
-            "kiến": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành tập đoàn. Chức năng: Phân hủy / ăn tạp.",
             "kien": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành tập đoàn. Chức năng: Phân hủy / ăn tạp.",
-            // gián / gian
-            "gián": "Thuộc lớp Côn trùng. Đặc điểm: Cơ thể dẹt, sống nơi ẩm thấp. Chức năng: Phân hủy / ăn tạp.",
+            "kiến": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành tập đoàn. Chức năng: Phân hủy / ăn tạp.",
             "gian": "Thuộc lớp Côn trùng. Đặc điểm: Cơ thể dẹt, sống nơi ẩm thấp. Chức năng: Phân hủy / ăn tạp.",
-            // sâu / sau
-            "sâu": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1.",
-            "sau": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1."
+            "gián": "Thuộc lớp Côn trùng. Đặc điểm: Cơ thể dẹt, sống nơi ẩm thấp. Chức năng: Phân hủy / ăn tạp.",
+            "sau": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1.",
+            "sâu": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1."
         };
+
+        // Hiển thị popup với tên loài, phần trăm và thông tin
+        function showPopup(animalName, percent, infoText) {
+            const now = Date.now();
+            const key = (animalName || '').toLowerCase().trim();
+
+            // Nếu cùng loài đã show gần đây, bỏ qua (tránh spam)
+            if (lastShownKey === key && (now - lastShownTime) < POPUP_MIN_INTERVAL_MS) {
+                return;
+            }
+
+            lastShownKey = key;
+            lastShownTime = now;
+
+            popupTitle.textContent = `LOÀI: ${animalName.toUpperCase()}`;
+            popupPercent.textContent = `${percent}%`;
+            popupInfo.textContent = infoText || '';
+            popupOverlay.classList.add('show');
+            popupOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function hidePopup() {
+            popupOverlay.classList.remove('show');
+            popupOverlay.setAttribute('aria-hidden', 'true');
+        }
 
         // Vòng lặp cập nhật & predict
         async function loop() {
@@ -371,7 +456,6 @@
             try {
                 const source = videoElem;
                 if (source && !source.paused && !source.ended) {
-                    // truyền thẳng video element vào model.predict
                     const prediction = await model.predict(source);
                     let highestPrediction = { className: "Chưa rõ", probability: 0 };
 
@@ -389,24 +473,24 @@
                     console.log('Highest prediction:', highestPrediction);
 
                     const infoElement = document.getElementById("khoa-hoc-info");
-                    // giữ ngưỡng 0.7 như trước để tránh báo sai, nhưng khi >0.7 thì hiển thị thông tin ngay lập tức
                     if (highestPrediction.probability > 0.7) { 
                         const animalName = String(highestPrediction.className || '').trim();
-                        // chuẩn hóa: chữ thường, bỏ dấu để đối chiếu an toàn
+                        const percent = (highestPrediction.probability * 100).toFixed(1);
                         const keyRaw = animalName.toLowerCase();
                         const keyStripped = stripDiacritics(keyRaw);
 
-                        // lấy thông tin từ bản đồ: ưu tiên keyRaw, nếu không có thì keyStripped
                         let classInfo = infoMap[keyRaw] || infoMap[keyStripped] || "";
 
-                        // Hiển thị tên loài và (nếu có) thông tin chi tiết.
-                        // Nếu không có classInfo, chỉ hiển thị tên loài (không hiển thị câu generic).
+                        // Hiển thị tên loài và info trong khu vực infoElement (như trước)
                         if (classInfo) {
                             infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
                         } else {
                             infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong>`;
                         }
-                        
+
+                        // Hiển thị popup ngay lập tức kèm phần trăm nhận dạng
+                        showPopup(animalName, percent, classInfo);
+
                     } else {
                         infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
                     }
