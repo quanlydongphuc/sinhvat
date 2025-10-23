@@ -188,14 +188,18 @@
 <body>
 
     <h1>🔍 Thám tử Nhận dạng Động vật</h1>
-    <p>Khoa học Lớp 4 - Chân trời sáng tạo</p>
-    <p><b>GV: Nguyễn Thị Thúy An</b></p>
+    <h2>Giáo viên: Nguyễn Thị Thúy An</h2>
     <p>Trường Tiểu học B Hòa Lạc</p>
 
     <div class="controls">
-        <button id="start-button">Bắt đầu (Camera sau)</button>
+        <!-- Hidden using the HTML hidden attribute (still present in DOM) -->
+        <button id="start-button" hidden>Bắt đầu (Camera sau)</button>
+
         <button id="upload-button" class="btn-upload">Tải ảnh lên</button>
-        <button id="camera-button" style="display:none;">Quay lại Camera</button>
+
+        <!-- Hidden using the HTML hidden attribute (still present in DOM) -->
+        <button id="camera-button" hidden>Quay lại Camera</button>
+
         <input type="file" id="file-input" accept="image/*" style="display:none">
     </div>
 
@@ -204,7 +208,7 @@
     
     <div class="phan-hoi-khoa-hoc">
         <h2>💡 Thông tin Khoa học về Loài vật</h2>
-        <p id="khoa-hoc-info">Nhấn "Bắt đầu" hoặc "Tải ảnh lên" để cho AI thấy một loài vật và bắt đầu phân tích...</p>
+        <p id="khoa-hoc-info">Nhấn "Tải ảnh lên" để cho AI thấy một loài vật và bắt đầu phân tích...</p>
     </div>
 
     <!-- Popup overlay -->
@@ -230,25 +234,27 @@
         let videoElem = null;
         let uploadedImageElem = null; // if user uploads an image
 
-        // mặc định là camera phía sau
+        // mặc định là camera phía sau (we keep the logic, but the start/camera buttons are hidden)
         let currentFacingMode = 'environment';
 
-        // controls
-        const startBtn = document.getElementById('start-button');
+        // controls (buttons still present in DOM but hidden)
+        const startBtn = document.getElementById('start-button'); // hidden
         const uploadBtn = document.getElementById('upload-button');
-        const cameraBtn = document.getElementById('camera-button');
+        const cameraBtn = document.getElementById('camera-button'); // hidden
         const fileInput = document.getElementById('file-input');
 
+        // Keep event handlers attached even though start and camera are hidden
         startBtn.addEventListener('click', () => startCamera(currentFacingMode));
         uploadBtn.addEventListener('click', () => fileInput.click());
-        cameraBtn.addEventListener('click', () => {
-            // hide any uploaded image and restart camera
+        cameraBtn.addEventListener('click', async () => {
+            // hide any uploaded image and restart camera if needed (button is hidden in UI)
             if (uploadedImageElem) {
                 uploadedImageElem.remove();
                 uploadedImageElem = null;
             }
-            cameraBtn.style.display = 'none';
-            startCamera(currentFacingMode);
+            // ensure cameraBtn remains hidden
+            cameraBtn.hidden = true;
+            await startCamera(currentFacingMode);
         });
         fileInput.addEventListener('change', async (e) => {
             const file = e.target.files && e.target.files[0];
@@ -363,7 +369,8 @@
                         const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } }, audio: false });
                         await attachStreamToVideo(stream);
                         document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera phía sau. Đang nhận dạng...';
-                        cameraBtn.style.display = 'none';
+                        // keep camera button hidden
+                        cameraBtn.hidden = true;
                         return;
                     } catch (err) {
                         console.warn('getUserMedia với deviceId thất bại, chuyển sang facingMode:', err);
@@ -375,7 +382,7 @@
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: false });
                     await attachStreamToVideo(stream);
                     document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera (facingMode). Đang nhận dạng...';
-                    cameraBtn.style.display = 'none';
+                    cameraBtn.hidden = true;
                     return;
                 } catch (err) {
                     console.error('getUserMedia facingMode thất bại:', err);
@@ -432,7 +439,8 @@
                 document.getElementById('webcam-container').appendChild(img);
 
                 uploadedImageElem = img;
-                cameraBtn.style.display = 'inline-block'; // hiện nút để quay lại camera
+                // keep cameraBtn hidden by design
+                cameraBtn.hidden = true;
 
                 // chờ ảnh load xong trước khi predict
                 img.onload = async () => {
