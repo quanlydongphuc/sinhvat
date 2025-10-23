@@ -296,6 +296,72 @@
             window.requestAnimationFrame(loop);
         }
 
+        // Hỗ trợ loại bỏ dấu để so khớp nhãn linh hoạt hơn
+        function stripDiacritics(str) {
+            if (!str) return str;
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g,'d').replace(/Đ/g,'D').trim();
+        }
+
+        // Bản đồ thông tin dùng key không dấu để tránh mismatch
+        const infoMap = {
+            // bò / bo
+            "bò": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
+            "bo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
+            // trâu / trau
+            "trâu": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
+            "trau": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
+            // heo
+            "heo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, da dày, mõm to. Chức năng: Sinh vật ăn tạp.",
+            // chó / cho
+            "chó": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn hỗn hợp).",
+            "cho": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn hỗn hợp).",
+            // mèo / meo
+            "mèo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2.",
+            "meo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2.",
+            // chuột / chuot
+            "chuột": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật ăn tạp, đóng vai trò tiêu thụ bậc 1/2.",
+            "chuot": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật ăn tạp, đóng vai trò tiêu thụ bậc 1/2.",
+            // gà/ga
+            "gà": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
+            "ga": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
+            // vịt/vit
+            "vịt": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
+            "vit": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
+            // chim
+            "chim": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có cánh và mỏ. Chức năng: Đa dạng, từ thụ phấn đến tiêu thụ bậc 2.",
+            // cá/ca
+            "cá": "Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Mắt xích quan trọng trong chuỗi thức ăn dưới nước.",
+            "ca": "Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Mắt xích quan trọng trong chuỗi thức ăn dưới nước.",
+            // ếch/ech
+            "ếch": "Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn nòng nọc. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).",
+            "ech": "Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn nòng nọc. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).",
+            // rắn/ran
+            "rắn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, động vật máu lạnh, không chân. Chức năng: Sinh vật tiêu thụ bậc 2/3.",
+            "ran": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, động vật máu lạnh, không chân. Chức năng: Sinh vật tiêu thụ bậc 2/3.",
+            // kì nhông / ki nhong / kinong
+            "kì nhông": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            "ki nhong": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            "kinhong": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            // thằn lằn / than lan
+            "thằn lằn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            "than lan": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            "thanlan": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
+            // bướm / buom
+            "bướm": "Thuộc lớp Côn trùng. Đặc điểm: Có cánh lớn, trải qua biến thái. Chức năng: Thụ phấn.",
+            "buom": "Thuộc lớp Côn trùng. Đặc điểm: Có cánh lớn, trải qua biến thái. Chức năng: Thụ phấn.",
+            // ong
+            "ong": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành đàn, thụ phấn. Chức năng: Thụ phấn và thu mật.",
+            // kiến / kien
+            "kiến": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành tập đoàn. Chức năng: Phân hủy / ăn tạp.",
+            "kien": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành tập đoàn. Chức năng: Phân hủy / ăn tạp.",
+            // gián / gian
+            "gián": "Thuộc lớp Côn trùng. Đặc điểm: Cơ thể dẹt, sống nơi ẩm thấp. Chức năng: Phân hủy / ăn tạp.",
+            "gian": "Thuộc lớp Côn trùng. Đặc điểm: Cơ thể dẹt, sống nơi ẩm thấp. Chức năng: Phân hủy / ăn tạp.",
+            // sâu / sau
+            "sâu": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1.",
+            "sau": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1."
+        };
+
         // Vòng lặp cập nhật & predict
         async function loop() {
             if (!model) {
@@ -319,77 +385,27 @@
                         }
                     }
 
+                    // DEBUG: in ra console để kiểm tra chính xác className được model trả về
+                    console.log('Highest prediction:', highestPrediction);
+
                     const infoElement = document.getElementById("khoa-hoc-info");
                     // giữ ngưỡng 0.7 như trước để tránh báo sai, nhưng khi >0.7 thì hiển thị thông tin ngay lập tức
                     if (highestPrediction.probability > 0.7) { 
-                        const animalName = highestPrediction.className;
-                        let classInfo = "";
+                        const animalName = String(highestPrediction.className || '').trim();
+                        // chuẩn hóa: chữ thường, bỏ dấu để đối chiếu an toàn
+                        const keyRaw = animalName.toLowerCase();
+                        const keyStripped = stripDiacritics(keyRaw);
 
-                        switch (animalName) {
-                            case "bò":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: **Sinh vật tiêu thụ bậc 1** (ăn cỏ/thực vật).`;
-                            break;
-                        case "trâu":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: **Sinh vật tiêu thụ bậc 1** (ăn cỏ/thực vật).`;
-                            break;
-                        case "heo":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, da dày, mõm to. Chức năng: **Sinh vật ăn tạp**, đóng vai trò tiêu thụ bậc 1 và bậc 2.`;
-                            break;
-                        case "chó":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là **Sinh vật tiêu thụ bậc 2** (ăn thịt/thức ăn hỗn hợp).`;
-                            break;
-                        case "mèo":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là **Sinh vật tiêu thụ bậc 2** (ăn thịt/côn trùng/chuột).`;
-                            break;
-                        case "chuột":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn để gặm nhấm. Chức năng: **Sinh vật ăn tạp**, đóng vai trò tiêu thụ bậc 1 (ăn hạt) và bậc 2.`;
-                            break;
-                        case "gà":
-                            classInfo = `Thuộc lớp **Chim** (Lớp Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: **Sinh vật tiêu thụ bậc 1 và 2** (ăn hạt, côn trùng).`;
-                            break;
-                        case "vịt":
-                            classInfo = `Thuộc lớp **Chim** (Lớp Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: **Sinh vật tiêu thụ bậc 1 và 2** (ăn thực vật dưới nước, côn trùng).`;
-                            break;
-                        case "chim":
-                            classInfo = `Thuộc lớp **Chim** (Lớp Aves). Đặc điểm: Có lông vũ, đẻ trứng, có cánh và mỏ. Chức năng: Đa dạng, từ **thụ phấn** đến **tiêu thụ bậc 2** (ăn sâu bọ).`;
-                            break;
-                        case "cá":
-                            classInfo = `Thuộc lớp **Cá**. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang, cơ thể thường có vảy. Chức năng: **Mắt xích quan trọng** trong chuỗi thức ăn dưới nước.`;
-                            break;
-                        case "ếch":
-                            classInfo = `Thuộc lớp **Lưỡng cư**. Đặc điểm: Da trần ẩm ướt, có giai đoạn sống dưới nước (nòng nọc) và trên cạn. Chức năng: **Sinh vật tiêu thụ bậc 2** (ăn côn trùng).`;
-                            break;
-                        case "rắn":
-                            classInfo = `Thuộc lớp **Bò sát**. Đặc điểm: Da khô có vảy, là động vật máu lạnh, không chân, di chuyển bằng cách trườn. Chức năng: **Sinh vật tiêu thụ bậc 2/3** (kiểm soát số lượng chuột, ếch, loài gặm nhấm).`;
-                            break;
-                        case "kì nhông":
-                            classInfo = `Thuộc lớp **Bò sát**. Đặc điểm: Da có vảy, thay đổi màu sắc để ngụy trang, có đuôi dài. Chức năng: **Sinh vật tiêu thụ bậc 2** (ăn côn trùng, giúp kiểm soát sâu bọ).`;
-                            break;
-                        case "thằn lằn":
-                            classInfo = `Thuộc lớp **Bò sát**. Đặc điểm: Da có vảy, có 4 chân nhỏ, có khả năng đứt đuôi để tự vệ. Chức năng: **Sinh vật tiêu thụ bậc 2** (ăn côn trùng nhỏ, sâu bọ).`;
-                            break;
-                        case "bướm":
-                            classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Có cánh lớn với nhiều màu sắc, trải qua quá trình biến thái (sâu -> nhộng -> bướm). Chức năng: **Thụ phấn** (rất quan trọng cho thực vật).`;
-                            break;
-                        case "ong":
-                            classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Cơ thể chia 3 phần, có 6 chân và 2 cặp cánh, thường sống thành đàn. Chức năng: **Thụ phấn** và là **sinh vật tiêu thụ bậc 1** (hút mật, phấn hoa).`;
-                            break;
-                        case "kiến":
-                            classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Cơ thể chia 3 phần, sống thành tập đoàn, có râu. Chức năng: **Phân hủy/Sinh vật ăn tạp** (giúp dọn dẹp xác hữu cơ và là nguồn thức ăn cho loài khác).`;
-                            break;
-                        case "gián":
-                            classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Cơ thể dẹt, có râu dài, sống ở nơi ẩm thấp. Chức năng: **Sinh vật phân hủy và ăn tạp**, không có vai trò tích cực trong chuỗi thức ăn.`;
-                            break;
-                        case "sâu":
-                            classInfo = `Thuộc lớp **Côn trùng** (Giai đoạn ấu trùng). Đặc điểm: Cơ thể mềm, di chuyển bằng cách bò. Chức năng: **Sinh vật tiêu thụ bậc 1** (ăn lá cây, là thức ăn cho các loài chim, ếch).`;
-                            break;
-                        default:
-                            classInfo = `Đây là **${animalName.toUpperCase()}** - Một loài vật thú vị! Hãy cùng tìm hiểu thêm về nó nhé.`;
-                            break;
-                    }
+                        // lấy thông tin từ bản đồ: ưu tiên keyRaw, nếu không có thì keyStripped
+                        let classInfo = infoMap[keyRaw] || infoMap[keyStripped] || "";
 
-                        // Hiển thị tên loài (always) và sau đó info chi tiết (nếu có)
-                        infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
+                        // Hiển thị tên loài và (nếu có) thông tin chi tiết.
+                        // Nếu không có classInfo, chỉ hiển thị tên loài (không hiển thị câu generic).
+                        if (classInfo) {
+                            infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
+                        } else {
+                            infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong>`;
+                        }
                         
                     } else {
                         infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
