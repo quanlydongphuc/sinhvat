@@ -55,6 +55,11 @@
             background-color: #218838;
         }
 
+        /* distinct style for upload button */
+        .btn-upload {
+            background: #17a2b8;
+        }
+
         #webcam-container {
             display: flex;
             justify-content: center;
@@ -63,7 +68,7 @@
             overflow: hidden;
         }
         
-        video, canvas {
+        video, img, canvas {
             border: 3px solid var(--primary-color);
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
@@ -171,7 +176,7 @@
                 width: 100%;
                 font-size: 1em;
             }
-            #webcam-container video, #webcam-container canvas {
+            #webcam-container video, #webcam-container canvas, #webcam-container img {
                 width: 100%;
                 height: auto;
             }
@@ -188,7 +193,10 @@
     <p>Trường Tiểu học B Hòa Lạc</p>
 
     <div class="controls">
-        <button id="start-button">Bắt đầu</button>
+        <button id="start-button">Truy tìm</button>
+        <button id="upload-button" class="btn-upload">Tải ảnh lên</button>
+        <button id="camera-button" style="display:none;">Quay lại Camera</button>
+        <input type="file" id="file-input" accept="image/*" style="display:none">
     </div>
 
     <div id="webcam-container"></div>
@@ -196,7 +204,7 @@
     
     <div class="phan-hoi-khoa-hoc">
         <h2>💡 Thông tin Khoa học về Loài vật</h2>
-        <p id="khoa-hoc-info">Nhấn "Bắt đầu" và cho AI thấy một con vật để bắt đầu phân tích...</p>
+        <p id="khoa-hoc-info">Nhấn "Truy tìm" hoặc "Tải ảnh lên" để cho AI thấy một loài vật và bắt đầu phân tích...</p>
     </div>
 
     <!-- Popup overlay -->
@@ -220,13 +228,37 @@
         // video / stream state
         let currentStream = null;
         let videoElem = null;
+        let uploadedImageElem = null; // if user uploads an image
 
         // mặc định là camera phía sau
         let currentFacingMode = 'environment';
 
         // controls
         const startBtn = document.getElementById('start-button');
+        const uploadBtn = document.getElementById('upload-button');
+        const cameraBtn = document.getElementById('camera-button');
+        const fileInput = document.getElementById('file-input');
+
         startBtn.addEventListener('click', () => startCamera(currentFacingMode));
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        cameraBtn.addEventListener('click', () => {
+            // hide any uploaded image and restart camera
+            if (uploadedImageElem) {
+                uploadedImageElem.remove();
+                uploadedImageElem = null;
+            }
+            cameraBtn.style.display = 'none';
+            startCamera(currentFacingMode);
+        });
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            // stop camera if running
+            await stopCurrentStream();
+            handleUploadFile(file);
+            // reset file input so same file can be selected again if needed
+            fileInput.value = "";
+        });
 
         // popup elements
         const popupOverlay = document.getElementById('popup-overlay');
@@ -331,6 +363,7 @@
                         const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } }, audio: false });
                         await attachStreamToVideo(stream);
                         document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera phía sau. Đang nhận dạng...';
+                        cameraBtn.style.display = 'none';
                         return;
                     } catch (err) {
                         console.warn('getUserMedia với deviceId thất bại, chuyển sang facingMode:', err);
@@ -342,6 +375,7 @@
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: false });
                     await attachStreamToVideo(stream);
                     document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera (facingMode). Đang nhận dạng...';
+                    cameraBtn.style.display = 'none';
                     return;
                 } catch (err) {
                     console.error('getUserMedia facingMode thất bại:', err);
@@ -375,6 +409,37 @@
 
             // bắt đầu vòng lặp predict
             window.requestAnimationFrame(loop);
+        }
+
+        // Xử lý file ảnh upload
+        async function handleUploadFile(file) {
+            if (!file) return;
+            await ensureModelLoaded();
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                const dataURL = evt.target.result;
+                // tạo img element hiển thị ảnh upload
+                const img = document.createElement('img');
+                img.src = dataURL;
+                img.alt = 'Uploaded image';
+                img.width = 300;
+                img.height = 300;
+                img.style.maxWidth = '100%';
+
+                // xóa vùng hiển thị cũ và hiển thị ảnh upload
+                document.getElementById('webcam-container').innerHTML = '';
+                document.getElementById('webcam-container').appendChild(img);
+
+                uploadedImageElem = img;
+                cameraBtn.style.display = 'inline-block'; // hiện nút để quay lại camera
+
+                // chờ ảnh load xong trước khi predict
+                img.onload = async () => {
+                    await predictImageElement(img);
+                };
+            };
+            reader.readAsDataURL(file);
         }
 
         // Hỗ trợ loại bỏ dấu để so khớp nhãn linh hoạt hơn
@@ -447,7 +512,50 @@
             popupOverlay.setAttribute('aria-hidden', 'true');
         }
 
-        // Vòng lặp cập nhật & predict
+        // Predict cho 1 image element (cũng dùng cho upload)
+        async function predictImageElement(imgElem) {
+            if (!model) return;
+            try {
+                const prediction = await model.predict(imgElem);
+                let highestPrediction = { className: "Chưa rõ", probability: 0 };
+
+                for (let i = 0; i < maxPredictions; i++) {
+                    const probabilityPercent = (prediction[i].probability * 100).toFixed(1) + "%";
+                    const child = document.getElementById('label-container').childNodes[i];
+                    if (child) child.innerHTML = `${prediction[i].className}: <strong>${probabilityPercent}</strong>`;
+                    
+                    if (prediction[i].probability > highestPrediction.probability) {
+                        highestPrediction = prediction[i];
+                    }
+                }
+
+                console.log('Highest prediction (image):', highestPrediction);
+
+                const infoElement = document.getElementById("khoa-hoc-info");
+                if (highestPrediction.probability > 0.7) { 
+                    const animalName = String(highestPrediction.className || '').trim();
+                    const percent = (highestPrediction.probability * 100).toFixed(1);
+                    const keyRaw = animalName.toLowerCase();
+                    const keyStripped = stripDiacritics(keyRaw);
+
+                    let classInfo = infoMap[keyRaw] || infoMap[keyStripped] || "";
+
+                    if (classInfo) {
+                        infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
+                    } else {
+                        infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong>`;
+                    }
+
+                    showPopup(animalName, percent, classInfo);
+                } else {
+                    infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng chọn ảnh rõ ràng hơn.";
+                }
+            } catch (err) {
+                console.warn('Lỗi predictImageElement:', err);
+            }
+        }
+
+        // Vòng lặp cập nhật & predict (cho camera)
         async function loop() {
             if (!model) {
                 window.requestAnimationFrame(loop);
@@ -469,8 +577,8 @@
                         }
                     }
 
-                    // DEBUG: in ra console để kiểm tra chính xác className được model trả về
-                    console.log('Highest prediction:', highestPrediction);
+                    // DEBUG:
+                    console.log('Highest prediction (camera):', highestPrediction);
 
                     const infoElement = document.getElementById("khoa-hoc-info");
                     if (highestPrediction.probability > 0.7) { 
@@ -481,16 +589,13 @@
 
                         let classInfo = infoMap[keyRaw] || infoMap[keyStripped] || "";
 
-                        // Hiển thị tên loài và info trong khu vực infoElement (như trước)
                         if (classInfo) {
                             infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
                         } else {
                             infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong>`;
                         }
 
-                        // Hiển thị popup ngay lập tức kèm phần trăm nhận dạng
                         showPopup(animalName, percent, classInfo);
-
                     } else {
                         infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
                     }
