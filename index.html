@@ -51,11 +51,8 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        button.secondary {
-            background-color: #17a2b8;
-        }
-        button.secondary:hover {
-            background-color: #138496;
+        button:hover {
+            background-color: #218838;
         }
 
         #webcam-container {
@@ -132,11 +129,10 @@
 
     <h1>🔍 Thám tử Nhận dạng Động vật</h1>
     <p>Khoa học Lớp 4 - Chân trời sáng tạo</p>
+    <p><b></b>Giáo viên: Nguyễn Thị Thúy An - Trường Tiểu học B Hòa Lạc</b></p>
 
     <div class="controls">
-        <button id="start-button">Bắt đầu Webcam</button>
-        <button id="front-button" class="secondary" style="display:none;">Camera trước</button>
-        <button id="back-button" class="secondary" style="display:none;">Camera sau</button>
+        <button id="start-button">Bắt đầu</button>
     </div>
 
     <div id="webcam-container"></div>
@@ -144,7 +140,7 @@
     
     <div class="phan-hoi-khoa-hoc">
         <h2>💡 Thông tin Khoa học về Loài vật</h2>
-        <p id="khoa-hoc-info">Nhấn "Bắt đầu Webcam" và cho AI thấy một con vật để bắt đầu phân tích...</p>
+        <p id="khoa-hoc-info">Nhấn "Bắt đầu" và cho AI thấy một con vật để bắt đầu phân tích...</p>
     </div>
 
     <script type="text/javascript">
@@ -158,17 +154,12 @@
         let currentStream = null;
         let videoElem = null;
 
-        // facing mode state: 'environment' (sau) hoặc 'user' (trước)
+        // mặc định là camera phía sau
         let currentFacingMode = 'environment';
 
         // controls
         const startBtn = document.getElementById('start-button');
-        const frontBtn = document.getElementById('front-button');
-        const backBtn = document.getElementById('back-button');
-
         startBtn.addEventListener('click', () => startCamera(currentFacingMode));
-        frontBtn.addEventListener('click', () => switchCamera('user'));
-        backBtn.addEventListener('click', () => switchCamera('environment'));
 
         // Tải model (1 lần)
         async function ensureModelLoaded() {
@@ -209,7 +200,7 @@
             const videoDevices = devices.filter(d => d.kind === 'videoinput');
             if (videoDevices.length === 0) return null;
 
-            // tìm label có rear/back/environment
+            // tìm label có rear/back/environment/main
             const prefer = videoDevices.find(d => d.label && /rear|back|environment|main/i.test(d.label));
             if (prefer) return prefer.deviceId;
 
@@ -237,14 +228,11 @@
         // Khởi động camera: ưu tiên deviceId nếu có, fallback facingMode
         async function startCamera(facingMode = 'environment') {
             currentFacingMode = facingMode;
-            frontBtn.style.display = 'none';
-            backBtn.style.display = 'none';
-
             try {
                 await ensureModelLoaded();
                 await stopCurrentStream();
 
-                document.getElementById('khoa-hoc-info').innerText = 'Đang kết nối camera...';
+                document.getElementById('khoa-hoc-info').innerText = 'Đang kết nối camera (mặc định: camera sau)...';
 
                 // Thử tìm deviceId tương ứng
                 let deviceId = null;
@@ -259,8 +247,7 @@
                     try {
                         const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } }, audio: false });
                         await attachStreamToVideo(stream);
-                        document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera (deviceId). Đang nhận dạng...';
-                        showCameraButtons();
+                        document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera phía sau. Đang nhận dạng...';
                         return;
                     } catch (err) {
                         console.warn('getUserMedia với deviceId thất bại, chuyển sang facingMode:', err);
@@ -273,7 +260,6 @@
                     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: false });
                     await attachStreamToVideo(stream);
                     document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera (facingMode). Đang nhận dạng...';
-                    showCameraButtons();
                     return;
                 } catch (err) {
                     console.error('getUserMedia facingMode thất bại:', err);
@@ -309,24 +295,6 @@
             window.requestAnimationFrame(loop);
         }
 
-        function showCameraButtons() {
-            frontBtn.style.display = 'inline-block';
-            backBtn.style.display = 'inline-block';
-            if (currentFacingMode === 'user') {
-                frontBtn.style.opacity = '0.6';
-                backBtn.style.opacity = '1';
-            } else {
-                frontBtn.style.opacity = '1';
-                backBtn.style.opacity = '0.6';
-            }
-        }
-
-        async function switchCamera(newFacing) {
-            if (newFacing === currentFacingMode) return;
-            document.getElementById('khoa-hoc-info').innerText = 'Đang chuyển camera...';
-            await startCamera(newFacing);
-        }
-
         // Vòng lặp cập nhật & predict
         async function loop() {
             if (!model) {
@@ -351,54 +319,58 @@
                     }
 
                     const infoElement = document.getElementById("khoa-hoc-info");
+                    // giữ ngưỡng 0.7 như trước để tránh báo sai, nhưng khi >0.7 thì hiển thị thông tin ngay lập tức
                     if (highestPrediction.probability > 0.7) { 
-                        let classInfo = "";
                         const animalName = highestPrediction.className;
+                        let classInfo = "";
 
                         switch (animalName) {
                             case "bò":
                             case "trâu":
                             case "heo":
-                                classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (trừ heo). Chức năng: Là sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).`;
+                                classInfo = `Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (trừ heo). Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).`;
                                 break;
                             case "chó":
                             case "mèo":
-                                classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ. Chức năng: Là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn khác).`;
+                                classInfo = `Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn khác).`;
                                 break;
                             case "gà":
                             case "vịt":
                             case "chim":
-                                classInfo = `Thuộc lớp **Chim** (Lớp Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ. Chức năng: Sinh vật tiêu thụ bậc 1 hoặc 2 (tùy theo thức ăn).`;
+                                classInfo = `Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ. Chức năng: Sinh vật tiêu thụ bậc 1 hoặc 2 (tùy theo thức ăn).`;
                                 break;
                             case "cá":
-                                classInfo = `Thuộc lớp **Cá**. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Đa dạng (sinh vật tiêu thụ, mắt xích quan trọng trong chuỗi thức ăn dưới nước).`;
+                                classInfo = `Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Đa dạng (sinh vật tiêu thụ, mắt xích quan trọng trong chuỗi thức ăn dưới nước).`;
                                 break;
                             case "ếch":
-                                classInfo = `Thuộc lớp **Lưỡng cư**. Đặc điểm: Da trần ẩm ướt, có giai đoạn sống dưới nước (nòng nọc) và trên cạn. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).`;
+                                classInfo = `Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn sống dưới nước (nòng nọc) và trên cạn. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).`;
                                 break;
                             case "rắn":
                             case "kì nhông":
                             case "thằn lằn":
-                                classInfo = `Thuộc lớp **Bò sát**. Đặc điểm: Da khô có vảy, là động vật máu lạnh, đẻ trứng. Chức năng: Thường là sinh vật tiêu thụ bậc 2 hoặc 3 (ăn côn trùng/động vật nhỏ).`;
+                                classInfo = `Thuộc lớp Bò sát. Đặc điểm: Da khô có vảy, là động vật máu lạnh, đẻ trứng. Chức năng: Thường là sinh vật tiêu thụ bậc 2 hoặc 3 (ăn côn trùng/động vật nhỏ).`;
                                 break;
                             case "bướm":
                             case "gián":
                             case "kiến":
                             case "ong":
-                                classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Cơ thể chia 3 phần (đầu, ngực, bụng), có 6 chân. Chức năng: Đa dạng (thụ phấn, phân hủy, sinh vật tiêu thụ bậc 1/2).`;
+                                classInfo = `Thuộc lớp Côn trùng. Đặc điểm: Cơ thể chia 3 phần (đầu, ngực, bụng), có 6 chân. Chức năng: Đa dạng (thụ phấn, phân hủy, sinh vật tiêu thụ bậc 1/2).`;
                                 break;
                             case "chuột":
-                                classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật tiêu thụ bậc 1/2 (ăn hạt, thực vật, đôi khi là côn trùng).`;
+                                classInfo = `Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật tiêu thụ bậc 1/2 (ăn hạt, thực vật, đôi khi là côn trùng).`;
                                 break;
                             case "sâu":
-                                classInfo = `Thuộc lớp **Côn trùng** (Giai đoạn ấu trùng). Đặc điểm: Cơ thể mềm, di chuyển bằng cách bò, có thể hóa nhộng. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn lá cây, thực vật).`;
+                                classInfo = `Thuộc lớp Côn trùng (Giai đoạn ấu trùng). Đặc điểm: Cơ thể mềm, di chuyển bằng cách bò, có thể hóa nhộng. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn lá cây, thực vật).`;
                                 break;
                             default:
-                                classInfo = `Đây là **${animalName.toUpperCase()}** - Một loài vật thú vị! Hãy cùng tìm hiểu thêm về nó nhé.`;
+                                // Không hiển thị câu generic "Đây là ... - Một loài vật thú vị..."
+                                // Thay vào đó hiển thị tên loài và một dòng ngắn nếu không có thông tin chi tiết
+                                classInfo = `Không có thông tin khoa học chi tiết đã lưu cho loài này.`;
                                 break;
                         }
 
-                        infoElement.innerHTML = `**Loài vật: ${animalName.toUpperCase()}**<br>` + classInfo;
+                        // Hiển thị tên loài (always) và sau đó info chi tiết (nếu có)
+                        infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
                         
                     } else {
                         infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
