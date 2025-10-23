@@ -31,21 +31,35 @@
             margin-bottom: 5px;
         }
 
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
         button {
             background-color: var(--secondary-color);
             color: white;
             border: none;
-            padding: 12px 25px;
+            padding: 12px 18px;
             border-radius: 8px;
-            font-size: 1.1em;
+            font-size: 1.0em;
             cursor: pointer;
             transition: background-color 0.3s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
 
         button:hover {
             background-color: #218838;
+        }
+
+        button.secondary {
+            background-color: #17a2b8;
+        }
+        button.secondary:hover {
+            background-color: #138496;
         }
 
         /* Container của Webcam (Đảm bảo hiển thị tốt trên Mobile) */
@@ -110,9 +124,10 @@
             body {
                 padding: 10px;
             }
+            .controls { gap: 8px; }
             button {
-                width: 100%;
-                font-size: 1em;
+                width: auto;
+                font-size: 0.95em;
             }
             #webcam-container canvas, #webcam-container video {
                 width: 100%;
@@ -127,7 +142,13 @@
     <h1>🔍 Thám tử Nhận dạng Động vật</h1>
     <p>Khoa học Lớp 4 - Chân trời sáng tạo</p>
 
-    <button type="button" id="start-button">Bắt đầu Webcam</button>
+    <div class="controls">
+        <button type="button" id="start-button">Bắt đầu Webcam</button>
+        <!-- Hai nút đổi camera: trước / sau -->
+        <button type="button" id="front-button" class="secondary" style="display:none;">Camera trước</button>
+        <button type="button" id="back-button" class="secondary" style="display:none;">Camera sau</button>
+    </div>
+
     <div id="webcam-container"></div>
     <div id="label-container"></div>
     
@@ -137,51 +158,72 @@
     </div>
 
     <script type="text/javascript">
-        // LƯU Ý QUAN TRỌNG: URL ĐÃ ĐƯỢC THAY THẾ BẰNG URL MÔ HÌNH CỦA BẠN
+        // URL MÔ HÌNH
         const URL = "https://teachablemachine.withgoogle.com/models/I2s7iGcQr/"; 
 
         let model, webcam, labelContainer, maxPredictions;
         let usingFallbackVideo = false;
         let fallbackVideoElement = null;
+        let currentFacingMode = 'environment'; // 'user' (trước) hoặc 'environment' (sau)
 
-        document.getElementById('start-button').addEventListener('click', init);
+        // Controls
+        const startBtn = document.getElementById('start-button');
+        const frontBtn = document.getElementById('front-button');
+        const backBtn = document.getElementById('back-button');
 
-        async function init() {
+        startBtn.addEventListener('click', () => startCamera(currentFacingMode));
+        frontBtn.addEventListener('click', () => switchCamera('user'));
+        backBtn.addEventListener('click', () => switchCamera('environment'));
+
+        // Hàm khởi động camera (dùng khi bấm "Bắt đầu" hoặc khi đổi camera)
+        async function startCamera(facingMode = 'environment') {
+            // Hiện/ẩn nút đổi camera sau khi có camera
+            frontBtn.style.display = 'none';
+            backBtn.style.display = 'none';
+
             try {
                 document.getElementById('khoa-hoc-info').innerText = 'Đang tải mô hình...';
                 const modelURL = URL + "model.json";
                 const metadataURL = URL + "metadata.json";
 
-                model = await tmImage.load(modelURL, metadataURL);
-                maxPredictions = model.getTotalClasses();
-
-                // Tạo containers label
-                labelContainer = document.getElementById("label-container");
-                labelContainer.innerHTML = '';
-                for (let i = 0; i < maxPredictions; i++) { 
-                    labelContainer.appendChild(document.createElement("div"));
+                // Nếu model chưa tải, tải 1 lần
+                if (!model) {
+                    model = await tmImage.load(modelURL, metadataURL);
+                    maxPredictions = model.getTotalClasses();
                 }
 
-                // Thử dùng tmImage.Webcam trước, nhưng đảm bảo video có playsinline/muted/autoplay
+                // Tạo containers label nếu chưa có
+                labelContainer = document.getElementById("label-container");
+                if (labelContainer.childNodes.length === 0) {
+                    labelContainer.innerHTML = '';
+                    for (let i = 0; i < maxPredictions; i++) { 
+                        labelContainer.appendChild(document.createElement("div"));
+                    }
+                }
+
+                currentFacingMode = facingMode;
+
+                // Nếu đã có stream trước đó thì dừng lại
+                await stopExistingStream();
+
+                // Thử dùng tmImage.Webcam
                 try {
-                    const flip = true;
+                    const flip = (facingMode === 'user'); // mirror nếu dùng camera trước
                     webcam = new tmImage.Webcam(300, 300, flip);
 
-                    // Một số phiên bản setup có thể nhận constraints, thử truyền facingMode
+                    // truyền constraint facingMode như ideal (tùy trình duyệt)
                     try {
-                        await webcam.setup({ video: { facingMode: { ideal: "environment" } } });
+                        await webcam.setup({ video: { facingMode: { ideal: facingMode } } });
                     } catch (e) {
-                        // nếu không hỗ trợ, gọi setup mặc định
+                        // fallback: gọi setup() mặc định
                         await webcam.setup();
                     }
 
-                    // Thiết lập thuộc tính cho phần tử video (để iOS/Safari không bật fullscreen)
-                    // Một số phiên bản của thư viện lưu video trong webcam.webcam
+                    // Đảm bảo thẻ video có playsinline, muted, autoplay (cần cho iOS)
                     if (webcam.webcam) {
                         webcam.webcam.setAttribute('playsinline', '');
                         webcam.webcam.setAttribute('muted', '');
                         webcam.webcam.setAttribute('autoplay', '');
-                        // đảm bảo properties js cũng được gán
                         webcam.webcam.playsInline = true;
                         webcam.webcam.muted = true;
                         webcam.webcam.autoplay = true;
@@ -194,29 +236,55 @@
                     await webcam.play();
                     usingFallbackVideo = false;
 
-                    // Thêm canvas của thư viện vào DOM
                     document.getElementById("webcam-container").innerHTML = '';
                     document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-                    // Bắt đầu vòng lặp
-                    window.requestAnimationFrame(loop);
+                    // Hiện nút đổi camera (hai nút) khi camera đã sẵn sàng
+                    frontBtn.style.display = 'inline-block';
+                    backBtn.style.display = 'inline-block';
+                    // Kẻo trùng button hiện trạng active, có thể ẩn nút tương ứng nếu muốn:
+                    if (currentFacingMode === 'user') {
+                        frontBtn.style.opacity = '0.6';
+                        backBtn.style.opacity = '1';
+                    } else {
+                        frontBtn.style.opacity = '1';
+                        backBtn.style.opacity = '0.6';
+                    }
 
                     document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera. Đang nhận dạng...';
+
+                    window.requestAnimationFrame(loop);
+                    return;
                 } catch (tmErr) {
-                    // Nếu tmImage.Webcam thất bại, fallback sang getUserMedia thủ công
                     console.warn('tmImage.Webcam failed, falling back to getUserMedia:', tmErr);
-                    await startFallbackVideo();
+                    // tiếp xuống fallback
                 }
+
+                // Fallback: sử dụng navigator.mediaDevices.getUserMedia trực tiếp
+                await startFallbackVideo(facingMode);
+
+                // Hiện nút đổi camera (hai nút)
+                frontBtn.style.display = 'inline-block';
+                backBtn.style.display = 'inline-block';
+                if (currentFacingMode === 'user') {
+                    frontBtn.style.opacity = '0.6';
+                    backBtn.style.opacity = '1';
+                } else {
+                    frontBtn.style.opacity = '1';
+                    backBtn.style.opacity = '0.6';
+                }
+
             } catch (err) {
                 console.error('Lỗi khi khởi tạo:', err);
-                document.getElementById('khoa-hoc-info').innerText = 'Lỗi khi tải mô hình hoặc truy cập camera: ' + err.message;
+                document.getElementById('khoa-hoc-info').innerText = 'Lỗi khi tải mô hình hoặc truy cập camera: ' + (err.message || err);
             }
         }
 
-        async function startFallbackVideo() {
+        // Bắt đầu fallback video với facingMode
+        async function startFallbackVideo(facingMode = 'environment') {
             const constraints = {
                 video: {
-                    facingMode: { ideal: "environment" },
+                    facingMode: { ideal: facingMode },
                     width: { ideal: 640 },
                     height: { ideal: 480 }
                 },
@@ -247,12 +315,53 @@
                 window.requestAnimationFrame(loop);
             } catch (err) {
                 console.error('getUserMedia fallback failed:', err);
-                document.getElementById('khoa-hoc-info').innerText = 'Không thể truy cập camera: ' + err.message;
+                document.getElementById('khoa-hoc-info').innerText = 'Không thể truy cập camera: ' + (err.message || err);
             }
         }
 
+        // Dừng stream cũ (nếu có) trước khi khởi tạo camera mới
+        async function stopExistingStream() {
+            try {
+                // dừng tmImage.Webcam nếu có
+                if (webcam) {
+                    try {
+                        if (typeof webcam.stop === 'function') {
+                            webcam.stop();
+                        }
+                        // nếu thư viện lưu webcam.webcam (video element)
+                        if (webcam.webcam && webcam.webcam.srcObject) {
+                            const tracks = webcam.webcam.srcObject.getTracks();
+                            tracks.forEach(t => t.stop());
+                            webcam.webcam.srcObject = null;
+                        }
+                    } catch (e) {
+                        console.warn('Lỗi khi dừng tmImage.Webcam:', e);
+                    }
+                    webcam = null;
+                }
+
+                // dừng fallback video nếu có
+                if (fallbackVideoElement && fallbackVideoElement.srcObject) {
+                    const tracks = fallbackVideoElement.srcObject.getTracks();
+                    tracks.forEach(t => t.stop());
+                    fallbackVideoElement.srcObject = null;
+                }
+                fallbackVideoElement = null;
+                usingFallbackVideo = false;
+            } catch (err) {
+                console.warn('Lỗi khi stopExistingStream:', err);
+            }
+        }
+
+        // Hàm đổi camera (gọi startCamera với facingMode mới)
+        async function switchCamera(newFacingMode) {
+            if (newFacingMode === currentFacingMode) return;
+            document.getElementById('khoa-hoc-info').innerText = 'Đang chuyển camera...';
+            await startCamera(newFacingMode);
+        }
+
         function loop() {
-            // Cập nhật frame (nếu dùng webcam class thì update, nếu fallback thì không cần)
+            if (!model) return;
             if (!usingFallbackVideo && webcam && typeof webcam.update === 'function') {
                 webcam.update();
             }
