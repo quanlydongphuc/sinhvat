@@ -31,35 +31,21 @@
             margin-bottom: 5px;
         }
 
-        .controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
         button {
             background-color: var(--secondary-color);
             color: white;
             border: none;
-            padding: 12px 18px;
+            padding: 12px 25px;
             border-radius: 8px;
-            font-size: 1.0em;
+            font-size: 1.1em;
             cursor: pointer;
             transition: background-color 0.3s;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
 
         button:hover {
             background-color: #218838;
-        }
-
-        button.secondary {
-            background-color: #17a2b8;
-        }
-        button.secondary:hover {
-            background-color: #138496;
         }
 
         /* Container của Webcam (Đảm bảo hiển thị tốt trên Mobile) */
@@ -71,12 +57,10 @@
             overflow: hidden;
         }
         
-        canvas, video {
+        canvas {
             border: 3px solid var(--primary-color);
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
-            max-width: 100%;
-            height: auto;
         }
 
         /* Phản hồi Nhận dạng (Label Container) */
@@ -124,12 +108,11 @@
             body {
                 padding: 10px;
             }
-            .controls { gap: 8px; }
             button {
-                width: auto;
-                font-size: 0.95em;
+                width: 100%;
+                font-size: 1em;
             }
-            #webcam-container canvas, #webcam-container video {
+            #webcam-container canvas {
                 width: 100%;
                 height: auto;
             }
@@ -142,13 +125,7 @@
     <h1>🔍 Thám tử Nhận dạng Động vật</h1>
     <p>Khoa học Lớp 4 - Chân trời sáng tạo</p>
 
-    <div class="controls">
-        <button type="button" id="start-button">Bắt đầu Webcam</button>
-        <!-- Hai nút đổi camera: trước / sau -->
-        <button type="button" id="front-button" class="secondary" style="display:none;">Camera trước</button>
-        <button type="button" id="back-button" class="secondary" style="display:none;">Camera sau</button>
-    </div>
-
+    <button type="button" onclick="init()">Bắt đầu Webcam</button>
     <div id="webcam-container"></div>
     <div id="label-container"></div>
     
@@ -158,293 +135,109 @@
     </div>
 
     <script type="text/javascript">
-        // URL MÔ HÌNH
+        // LƯU Ý QUAN TRỌNG: URL ĐÃ ĐƯỢC THAY THẾ BẰNG URL MÔ HÌNH CỦA BẠN
         const URL = "https://teachablemachine.withgoogle.com/models/I2s7iGcQr/"; 
 
         let model, webcam, labelContainer, maxPredictions;
-        let usingFallbackVideo = false;
-        let fallbackVideoElement = null;
-        let currentFacingMode = 'environment'; // 'user' (trước) hoặc 'environment' (sau)
 
-        // Controls
-        const startBtn = document.getElementById('start-button');
-        const frontBtn = document.getElementById('front-button');
-        const backBtn = document.getElementById('back-button');
+        async function init() {
+            const modelURL = URL + "model.json";
+            const metadataURL = URL + "metadata.json";
 
-        startBtn.addEventListener('click', () => startCamera(currentFacingMode));
-        frontBtn.addEventListener('click', () => switchCamera('user'));
-        backBtn.addEventListener('click', () => switchCamera('environment'));
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
 
-        // Hàm khởi động camera (dùng khi bấm "Bắt đầu" hoặc khi đổi camera)
-        async function startCamera(facingMode = 'environment') {
-            // Hiện/ẩn nút đổi camera sau khi có camera
-            frontBtn.style.display = 'none';
-            backBtn.style.display = 'none';
+            const flip = true; 
+            webcam = new tmImage.Webcam(300, 300, flip); 
+            await webcam.setup(); 
+            await webcam.play();
+            window.requestAnimationFrame(loop);
 
-            try {
-                document.getElementById('khoa-hoc-info').innerText = 'Đang tải mô hình...';
-                const modelURL = URL + "model.json";
-                const metadataURL = URL + "metadata.json";
-
-                // Nếu model chưa tải, tải 1 lần
-                if (!model) {
-                    model = await tmImage.load(modelURL, metadataURL);
-                    maxPredictions = model.getTotalClasses();
-                }
-
-                // Tạo containers label nếu chưa có
-                labelContainer = document.getElementById("label-container");
-                if (labelContainer.childNodes.length === 0) {
-                    labelContainer.innerHTML = '';
-                    for (let i = 0; i < maxPredictions; i++) { 
-                        labelContainer.appendChild(document.createElement("div"));
-                    }
-                }
-
-                currentFacingMode = facingMode;
-
-                // Nếu đã có stream trước đó thì dừng lại
-                await stopExistingStream();
-
-                // Thử dùng tmImage.Webcam
-                try {
-                    const flip = (facingMode === 'user'); // mirror nếu dùng camera trước
-                    webcam = new tmImage.Webcam(300, 300, flip);
-
-                    // truyền constraint facingMode như ideal (tùy trình duyệt)
-                    try {
-                        await webcam.setup({ video: { facingMode: { ideal: facingMode } } });
-                    } catch (e) {
-                        // fallback: gọi setup() mặc định
-                        await webcam.setup();
-                    }
-
-                    // Đảm bảo thẻ video có playsinline, muted, autoplay (cần cho iOS)
-                    if (webcam.webcam) {
-                        webcam.webcam.setAttribute('playsinline', '');
-                        webcam.webcam.setAttribute('muted', '');
-                        webcam.webcam.setAttribute('autoplay', '');
-                        webcam.webcam.playsInline = true;
-                        webcam.webcam.muted = true;
-                        webcam.webcam.autoplay = true;
-                    } else if (webcam.video) {
-                        webcam.video.playsInline = true;
-                        webcam.video.muted = true;
-                        webcam.video.autoplay = true;
-                    }
-
-                    await webcam.play();
-                    usingFallbackVideo = false;
-
-                    document.getElementById("webcam-container").innerHTML = '';
-                    document.getElementById("webcam-container").appendChild(webcam.canvas);
-
-                    // Hiện nút đổi camera (hai nút) khi camera đã sẵn sàng
-                    frontBtn.style.display = 'inline-block';
-                    backBtn.style.display = 'inline-block';
-                    // Kẻo trùng button hiện trạng active, có thể ẩn nút tương ứng nếu muốn:
-                    if (currentFacingMode === 'user') {
-                        frontBtn.style.opacity = '0.6';
-                        backBtn.style.opacity = '1';
-                    } else {
-                        frontBtn.style.opacity = '1';
-                        backBtn.style.opacity = '0.6';
-                    }
-
-                    document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera. Đang nhận dạng...';
-
-                    window.requestAnimationFrame(loop);
-                    return;
-                } catch (tmErr) {
-                    console.warn('tmImage.Webcam failed, falling back to getUserMedia:', tmErr);
-                    // tiếp xuống fallback
-                }
-
-                // Fallback: sử dụng navigator.mediaDevices.getUserMedia trực tiếp
-                await startFallbackVideo(facingMode);
-
-                // Hiện nút đổi camera (hai nút)
-                frontBtn.style.display = 'inline-block';
-                backBtn.style.display = 'inline-block';
-                if (currentFacingMode === 'user') {
-                    frontBtn.style.opacity = '0.6';
-                    backBtn.style.opacity = '1';
-                } else {
-                    frontBtn.style.opacity = '1';
-                    backBtn.style.opacity = '0.6';
-                }
-
-            } catch (err) {
-                console.error('Lỗi khi khởi tạo:', err);
-                document.getElementById('khoa-hoc-info').innerText = 'Lỗi khi tải mô hình hoặc truy cập camera: ' + (err.message || err);
+            document.getElementById("webcam-container").innerHTML = '';
+            document.getElementById("webcam-container").appendChild(webcam.canvas);
+            
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = '';
+            for (let i = 0; i < maxPredictions; i++) { 
+                labelContainer.appendChild(document.createElement("div"));
             }
-        }
-
-        // Bắt đầu fallback video với facingMode
-        async function startFallbackVideo(facingMode = 'environment') {
-            const constraints = {
-                video: {
-                    facingMode: { ideal: facingMode },
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                },
-                audio: false
-            };
-
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                const video = document.createElement('video');
-                video.playsInline = true; // rất quan trọng cho iOS
-                video.muted = true;
-                video.autoplay = true;
-                video.width = 300;
-                video.height = 300;
-                video.style.maxWidth = '100%';
-                video.srcObject = stream;
-
-                await video.play();
-
-                fallbackVideoElement = video;
-                usingFallbackVideo = true;
-
-                document.getElementById("webcam-container").innerHTML = '';
-                document.getElementById("webcam-container").appendChild(video);
-
-                document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera (fallback). Đang nhận dạng...';
-
-                window.requestAnimationFrame(loop);
-            } catch (err) {
-                console.error('getUserMedia fallback failed:', err);
-                document.getElementById('khoa-hoc-info').innerText = 'Không thể truy cập camera: ' + (err.message || err);
-            }
-        }
-
-        // Dừng stream cũ (nếu có) trước khi khởi tạo camera mới
-        async function stopExistingStream() {
-            try {
-                // dừng tmImage.Webcam nếu có
-                if (webcam) {
-                    try {
-                        if (typeof webcam.stop === 'function') {
-                            webcam.stop();
-                        }
-                        // nếu thư viện lưu webcam.webcam (video element)
-                        if (webcam.webcam && webcam.webcam.srcObject) {
-                            const tracks = webcam.webcam.srcObject.getTracks();
-                            tracks.forEach(t => t.stop());
-                            webcam.webcam.srcObject = null;
-                        }
-                    } catch (e) {
-                        console.warn('Lỗi khi dừng tmImage.Webcam:', e);
-                    }
-                    webcam = null;
-                }
-
-                // dừng fallback video nếu có
-                if (fallbackVideoElement && fallbackVideoElement.srcObject) {
-                    const tracks = fallbackVideoElement.srcObject.getTracks();
-                    tracks.forEach(t => t.stop());
-                    fallbackVideoElement.srcObject = null;
-                }
-                fallbackVideoElement = null;
-                usingFallbackVideo = false;
-            } catch (err) {
-                console.warn('Lỗi khi stopExistingStream:', err);
-            }
-        }
-
-        // Hàm đổi camera (gọi startCamera với facingMode mới)
-        async function switchCamera(newFacingMode) {
-            if (newFacingMode === currentFacingMode) return;
-            document.getElementById('khoa-hoc-info').innerText = 'Đang chuyển camera...';
-            await startCamera(newFacingMode);
         }
 
         function loop() {
-            if (!model) return;
-            if (!usingFallbackVideo && webcam && typeof webcam.update === 'function') {
-                webcam.update();
-            }
+            webcam.update(); 
             predict();
             window.requestAnimationFrame(loop);
         }
 
         async function predict() {
-            if (!model) return;
+            const prediction = await model.predict(webcam.canvas);
+            let highestPrediction = { className: "Chưa rõ", probability: 0 };
 
-            try {
-                const source = usingFallbackVideo ? fallbackVideoElement : (webcam ? webcam.canvas : null);
-                if (!source) return;
-
-                const prediction = await model.predict(source);
-                let highestPrediction = { className: "Chưa rõ", probability: 0 };
-
-                for (let i = 0; i < maxPredictions; i++) {
-                    const probabilityPercent = (prediction[i].probability * 100).toFixed(1) + "%";
-                    labelContainer.childNodes[i].innerHTML = `${prediction[i].className}: <strong>${probabilityPercent}</strong>`;
-                    
-                    if (prediction[i].probability > highestPrediction.probability) {
-                        highestPrediction = prediction[i];
-                    }
-                }
+            for (let i = 0; i < maxPredictions; i++) {
+                const probabilityPercent = (prediction[i].probability * 100).toFixed(1) + "%";
+                labelContainer.childNodes[i].innerHTML = `${prediction[i].className}: <strong>${probabilityPercent}</strong>`;
                 
-                const infoElement = document.getElementById("khoa-hoc-info");
-                
-                if (highestPrediction.probability > 0.7) { 
-                    let classInfo = "";
-                    const animalName = highestPrediction.className;
-
-                    switch (animalName) {
-                        case "bò":
-                        case "trâu":
-                        case "heo":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (trừ heo). Chức năng: Là sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).`;
-                            break;
-                        case "chó":
-                        case "mèo":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ. Chức năng: Là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn khác).`;
-                            break;
-                        case "gà":
-                        case "vịt":
-                        case "chim":
-                            classInfo = `Thuộc lớp **Chim** (Lớp Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ. Chức năng: Sinh vật tiêu thụ bậc 1 hoặc 2 (tùy theo thức ăn).`;
-                            break;
-                        case "cá":
-                            classInfo = `Thuộc lớp **Cá**. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Đa dạng (sinh vật tiêu thụ, mắt xích quan trọng trong chuỗi thức ăn dưới nước).`;
-                            break;
-                        case "ếch":
-                            classInfo = `Thuộc lớp **Lưỡng cư**. Đặc điểm: Da trần ẩm ướt, có giai đoạn sống dưới nước (nòng nọc) và trên cạn. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).`;
-                            break;
-                        case "rắn":
-                        case "kì nhông":
-                        case "thằn lằn":
-                            classInfo = `Thuộc lớp **Bò sát**. Đặc điểm: Da khô có vảy, là động vật máu lạnh, đẻ trứng. Chức năng: Thường là sinh vật tiêu thụ bậc 2 hoặc 3 (ăn côn trùng/động vật nhỏ).`;
-                            break;
-                        case "bướm":
-                        case "gián":
-                        case "kiến":
-                        case "ong":
-                            classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Cơ thể chia 3 phần (đầu, ngực, bụng), có 6 chân. Chức năng: Đa dạng (thụ phấn, phân hủy, sinh vật tiêu thụ bậc 1/2).`;
-                            break;
-                        case "chuột":
-                            classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật tiêu thụ bậc 1/2 (ăn hạt, thực vật, đôi khi là côn trùng).`;
-                            break;
-                        case "sâu":
-                            classInfo = `Thuộc lớp **Côn trùng** (Giai đoạn ấu trùng). Đặc điểm: Cơ thể mềm, di chuyển bằng cách bò, có thể hóa nhộng. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn lá cây, thực vật).`;
-                            break;
-                        default:
-                            classInfo = `Đây là **${animalName.toUpperCase()}** - Một loài vật thú vị! Hãy cùng tìm hiểu thêm về nó nhé.`;
-                            break;
-                    }
-
-                    infoElement.innerHTML = `**Loài vật: ${animalName.toUpperCase()}**<br>` + classInfo;
-                    
-                } else {
-                     infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
+                if (prediction[i].probability > highestPrediction.probability) {
+                    highestPrediction = prediction[i];
                 }
-            } catch (err) {
-                console.error('Lỗi predict:', err);
             }
+            
+            // --- PHẦN LUẬT LOGIC KHOA HỌC MỚI (JavaScript) ---
+            const infoElement = document.getElementById("khoa-hoc-info");
+            
+            if (highestPrediction.probability > 0.7) { 
+                let classInfo = "";
+                const animalName = highestPrediction.className;
+
+                switch (animalName) {
+                    case "bò":
+                    case "trâu":
+                    case "heo":
+                        classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (trừ heo). Chức năng: Là sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).`;
+                        break;
+                    case "chó":
+                    case "mèo":
+                        classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ. Chức năng: Là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn khác).`;
+                        break;
+                    case "gà":
+                    case "vịt":
+                    case "chim":
+                        classInfo = `Thuộc lớp **Chim** (Lớp Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ. Chức năng: Sinh vật tiêu thụ bậc 1 hoặc 2 (tùy theo thức ăn).`;
+                        break;
+                    case "cá":
+                        classInfo = `Thuộc lớp **Cá**. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Đa dạng (sinh vật tiêu thụ, mắt xích quan trọng trong chuỗi thức ăn dưới nước).`;
+                        break;
+                    case "ếch":
+                        classInfo = `Thuộc lớp **Lưỡng cư**. Đặc điểm: Da trần ẩm ướt, có giai đoạn sống dưới nước (nòng nọc) và trên cạn. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).`;
+                        break;
+                    case "rắn":
+                    case "kì nhông":
+                    case "thằn lằn":
+                        classInfo = `Thuộc lớp **Bò sát**. Đặc điểm: Da khô có vảy, là động vật máu lạnh, đẻ trứng. Chức năng: Thường là sinh vật tiêu thụ bậc 2 hoặc 3 (ăn côn trùng/động vật nhỏ).`;
+                        break;
+                    case "bướm":
+                    case "gián":
+                    case "kiến":
+                    case "ong":
+                        classInfo = `Thuộc lớp **Côn trùng**. Đặc điểm: Cơ thể chia 3 phần (đầu, ngực, bụng), có 6 chân. Chức năng: Đa dạng (thụ phấn, phân hủy, sinh vật tiêu thụ bậc 1/2).`;
+                        break;
+                    case "chuột":
+                        classInfo = `Thuộc lớp **Động vật có vú**. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật tiêu thụ bậc 1/2 (ăn hạt, thực vật, đôi khi là côn trùng).`;
+                        break;
+                    case "sâu":
+                        classInfo = `Thuộc lớp **Côn trùng** (Giai đoạn ấu trùng). Đặc điểm: Cơ thể mềm, di chuyển bằng cách bò, có thể hóa nhộng. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn lá cây, thực vật).`;
+                        break;
+                    default:
+                        classInfo = `Đây là **${animalName.toUpperCase()}** - Một loài vật thú vị! Hãy cùng tìm hiểu thêm về nó nhé.`;
+                        break;
+                }
+
+                infoElement.innerHTML = `**Loài vật: ${animalName.toUpperCase()}**<br>` + classInfo;
+                
+            } else {
+                 infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
+            }
+            // ----------------------------------------------------------------------
         }
     </script>
 
