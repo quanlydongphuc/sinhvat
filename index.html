@@ -15,7 +15,7 @@
     .controls{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
     button{background:var(--secondary-color);color:#fff;border:none;padding:12px 18px;border-radius:8px;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.08)}
     button:hover{filter:brightness(.95)}
-    .btn-upload{background:#17a2b8}.btn-library{background:#6f42c1}
+    .btn-upload{background:#17a2b8}.btn-library{background:#6f42c1}.btn-author{background:#ff6f61}
     #webcam-container{display:flex;justify-content:center;margin-bottom:20px;width:100%;overflow:hidden}
     video,img,canvas{border:3px solid var(--primary-color);border-radius:10px;box-shadow:0 0 15px rgba(0,123,255,0.25);max-width:100%;height:auto}
     #label-container{margin:15px auto;max-width:350px;text-align:left;padding:10px;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05)}
@@ -36,6 +36,15 @@
     .record{display:flex;gap:12px;padding:10px;border-bottom:1px solid #eee;align-items:center}
     .h1-break { display: block; }
     .record img{width:120px;height:auto;border-radius:8px;object-fit:cover}.record .meta{text-align:left;font-size:0.95em}.record .meta b{display:block;color:var(--primary-color)}
+
+    /* Author popup styles */
+    .author-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:10002;padding:20px}
+    .author-overlay.show{display:flex}
+    .author-card{background:#fff;border-radius:12px;max-width:480px;width:100%;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.25);text-align:center;overflow:auto}
+    .author-photo{width:100%;height:auto;border-radius:8px;object-fit:cover;max-height:360px}
+    .author-info{margin-top:12px;text-align:left;color:#222;line-height:1.45}
+    .author-info b{display:inline-block;width:160px}
+
     @media(max-width:600px){.record{flex-direction:column;align-items:flex-start}button{width:100%}}
   </style>
 </head>
@@ -49,6 +58,7 @@
     <button id="start-button" hidden>Bắt đầu (Camera sau)</button>
     <button id="upload-button" class="btn-upload">Chụp/Tải ảnh lên</button>
     <button id="library-button" class="btn-library">Thư viện</button>
+    <button id="author-button" class="btn-author">Tác giả</button>
     <button id="camera-button" hidden>Quay lại Camera</button>
     <input type="file" id="file-input" accept="image/*" style="display:none">
   </div>
@@ -89,7 +99,6 @@
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3>Thư viện nhận dạng (chung)</h3>
         <div>
-          <!-- Removed "Làm mới" button as requested; only keep "Đóng" -->
           <button id="library-close" style="margin-left:8px">Đóng</button>
         </div>
       </div>
@@ -97,11 +106,32 @@
     </div>
   </div>
 
+  <!-- author popup -->
+  <div id="author-overlay" class="author-overlay" aria-hidden="true">
+    <div class="author-card" role="dialog" aria-modal="true" aria-labelledby="author-title">
+      <img id="author-photo" class="author-photo" src="tacgia.jpg" alt="Ảnh tác giả">
+      <!-- Note: replace src="author.jpg" with the real image path or hosted URL (Cloudinary/HTTP) -->
+      <div class="author-info" id="author-info">
+        <h3 id="author-title" style="margin:10px 0 8px;color:var(--primary-color)">Thông tin Tác giả</h3>
+        <p><b>Họ và tên:</b> Nguyễn Thị Thúy An</p>
+        <p><b>Năm sinh:</b> 17/06/1994</p>
+        <p><b>Quê quán:</b> Hòa Lộc, Hòa Lạc, An Giang</p>
+        <p><b>Đơn vị công tác:</b> Trường Tiểu học B Hòa Lạc, An Giang</p>
+        <p><b>Chức vụ:</b> Giáo viên chủ nhiệm lớp 4C</p>
+        <p><b>Tên đề tài:</b> "Thám tử AI - Nhận dạng Động vật"</p>
+        <p><b>Thời gian thực hiện đề tài:</b> tháng 10 năm 2025</p>
+      </div>
+      <div style="text-align:right;margin-top:12px;">
+        <button id="author-close" style="background:#6c757d;color:#fff;padding:8px 12px;border-radius:8px;border:0">Đóng</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 /* ========== CONFIG ========== */
 const CLOUDINARY_CLOUD_NAME = 'dlb55gph5';
 const CLOUDINARY_UNSIGNED_UPLOAD_PRESET = 'unsigned_preset'; // replace with your actual preset name
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby1SSkXTgflPR3ITPUZJEw8DYHo6I87udqNJd5T3pRN67vuOBFPVQxiJrvh57AIaPZe9A/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7TDQIOXHRCwxt7turz6oR6UYkh8M8mT-cS3tOGCmpVitYCOuXOsuU3nfz9_bqe3pv/exec';
 const MODEL_URL = "https://teachablemachine.withgoogle.com/models/I2s7iGcQr/";
 
 /* ========== State & DOM ========== */
@@ -112,9 +142,14 @@ let smallPredictSize = 224; // size used for fast prediction (smaller -> faster)
 const uploadBtn = document.getElementById('upload-button');
 const fileInput = document.getElementById('file-input');
 const libraryBtn = document.getElementById('library-button');
+const authorBtn = document.getElementById('author-button');
 const libraryOverlay = document.getElementById('library-overlay');
 const libraryList = document.getElementById('library-list');
 const libraryClose = document.getElementById('library-close');
+
+const authorOverlay = document.getElementById('author-overlay');
+const authorClose = document.getElementById('author-close');
+const authorPhoto = document.getElementById('author-photo');
 
 const popupOverlay = document.getElementById('popup-overlay');
 const popupClose = document.getElementById('popup-close');
@@ -520,6 +555,26 @@ function renderLibrary(items) {
 /* ========== UI handlers ========== */
 libraryBtn.addEventListener('click', ()=>{ libraryOverlay.classList.add('show'); libraryOverlay.setAttribute('aria-hidden','false'); loadLibraryOnce(); });
 libraryClose.addEventListener('click', ()=>{ libraryOverlay.classList.remove('show'); libraryOverlay.setAttribute('aria-hidden','true'); });
+
+// Author modal handlers
+authorBtn.addEventListener('click', ()=> {
+  // If you want to set author photo dynamically, you can set authorPhoto.src here.
+  // Example: authorPhoto.src = 'https://.../your-hosted-author-image.jpg';
+  authorOverlay.classList.add('show');
+  authorOverlay.setAttribute('aria-hidden','false');
+});
+authorClose.addEventListener('click', ()=> {
+  authorOverlay.classList.remove('show');
+  authorOverlay.setAttribute('aria-hidden','true');
+});
+
+// Clicking outside author card closes it
+authorOverlay.addEventListener('click', (e) => {
+  if (e.target === authorOverlay) {
+    authorOverlay.classList.remove('show');
+    authorOverlay.setAttribute('aria-hidden','true');
+  }
+});
 
 /* ========== Camera prediction loop ========== */
 async function loop() {
