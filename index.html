@@ -1,624 +1,560 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔍 Thám tử Nhận dạng Động vật AI</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
-    
-    <style>
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #28a745;
-            --background-color: #f8f9fa;
-            --text-color: #343a40;
-            --font-family: 'Arial', sans-serif;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🔍 Thám tử Nhận dạng Động vật AI — nhanh & đầy đủ</title>
 
-        body {
-            font-family: var(--font-family);
-            background-color: var(--background-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-        }
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 
-        h1 {
-            color: var(--primary-color);
-            margin-bottom: 5px;
-        }
-
-        .controls {
-            display:flex;
-            gap:10px;
-            justify-content:center;
-            margin-bottom:20px;
-            flex-wrap:wrap;
-        }
-
-        button {
-            background-color: var(--secondary-color);
-            color: white;
-            border: none;
-            padding: 12px 18px;
-            border-radius: 8px;
-            font-size: 1.0em;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        button:hover {
-            background-color: #218838;
-        }
-
-        /* distinct style for upload button */
-        .btn-upload {
-            background: #17a2b8;
-        }
-
-        #webcam-container {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            width: 100%;
-            overflow: hidden;
-        }
-        
-        video, img, canvas {
-            border: 3px solid var(--primary-color);
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
-            max-width: 100%;
-            height: auto;
-        }
-
-        #label-container {
-            margin: 15px auto;
-            max-width: 350px;
-            text-align: left;
-            padding: 10px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        
-        #label-container div {
-            padding: 5px 0;
-            border-bottom: 1px dashed #ccc;
-            font-size: 0.9em;
-        }
-
-        .phan-hoi-khoa-hoc {
-            background-color: white;
-            border: 1px solid var(--primary-color);
-            border-left: 5px solid var(--primary-color);
-            padding: 15px;
-            margin-top: 30px;
-            text-align: left;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .phan-hoi-khoa-hoc h2 {
-            color: var(--primary-color);
-            margin-top: 0;
-            font-size: 1.2em;
-        }
-        
-        #khoa-hoc-info {
-            line-height: 1.6;
-            font-size: 1em;
-        }
-
-        /* Popup styles */
-        .popup-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            padding: 20px;
-        }
-        .popup-overlay.show {
-            display: flex;
-        }
-        .popup {
-            background: #fff;
-            border-radius: 12px;
-            max-width: 420px;
-            width: 100%;
-            padding: 18px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-            text-align: left;
-            animation: popupIn .18s ease-out;
-        }
-        @keyframes popupIn {
-            from { transform: translateY(12px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        .popup h3 {
-            margin: 0 0 8px 0;
-            color: var(--primary-color);
-        }
-        .popup .percent {
-            font-weight: 700;
-            color: var(--secondary-color);
-            margin-left: 6px;
-        }
-        .popup .info {
-            margin-top: 10px;
-            line-height: 1.5;
-        }
-        .popup .actions {
-            margin-top: 14px;
-            text-align: right;
-        }
-        .popup .btn-close {
-            background: #6c757d;
-            color: #fff;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            button {
-                width: 100%;
-                font-size: 1em;
-            }
-            #webcam-container video, #webcam-container canvas, #webcam-container img {
-                width: 100%;
-                height: auto;
-            }
-            .popup { padding: 14px; }
-        }
-
-    </style>
+  <style>
+    :root{--primary-color:#007bff;--secondary-color:#28a745;--background-color:#f8f9fa;--text-color:#343a40;--font-family:'Arial',sans-serif;}
+    body{font-family:var(--font-family);background:var(--background-color);color:var(--text-color);margin:0;padding:20px;text-align:center}
+    h1{color:var(--primary-color);margin-bottom:5px}
+    .controls{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+    button{background:var(--secondary-color);color:#fff;border:none;padding:12px 18px;border-radius:8px;cursor:pointer;box-shadow:0 4px 6px rgba(0,0,0,0.08)}
+    button:hover{filter:brightness(.95)}
+    .btn-upload{background:#17a2b8}.btn-library{background:#6f42c1}
+    #webcam-container{display:flex;justify-content:center;margin-bottom:20px;width:100%;overflow:hidden}
+    video,img,canvas{border:3px solid var(--primary-color);border-radius:10px;box-shadow:0 0 15px rgba(0,123,255,0.25);max-width:100%;height:auto}
+    #label-container{margin:15px auto;max-width:350px;text-align:left;padding:10px;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.05)}
+    #label-container div{padding:5px 0;border-bottom:1px dashed #ccc;font-size:0.95em}
+    .phan-hoi-khoa-hoc{background:#fff;border:1px solid var(--primary-color);border-left:5px solid var(--primary-color);padding:15px;margin-top:30px;text-align:left;border-radius:8px}
+    .phan-hoi-khoa-hoc h2{color:var(--primary-color);margin-top:0;font-size:1.2em}
+    .status{margin-top:8px;font-weight:600;color:#333}.status.error{color:#b00020}
+    .popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+    .popup-overlay.show{display:flex}
+    .popup{background:#fff;border-radius:12px;max-width:640px;width:100%;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.25);text-align:left;max-height:80vh;overflow:auto}
+    .popup h3{margin:0 0 12px 0}
+    .popup .info{white-space:pre-wrap;line-height:1.45;max-height:50vh;overflow:auto}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:10000;padding:20px}
+    .modal.show{display:flex}.modal .card{background:#fff;padding:18px;border-radius:10px;width:100%;max-width:420px;text-align:left}
+    .modal input{padding:8px;margin-top:6px;margin-bottom:12px;width:100%;border-radius:6px;border:1px solid #ddd}
+    .library-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;z-index:10001;padding:20px;overflow:auto}
+    .library-overlay.show{display:block}.library{background:#fff;border-radius:10px;max-width:900px;margin:30px auto;padding:14px}
+    .record{display:flex;gap:12px;padding:10px;border-bottom:1px solid #eee;align-items:center}
+    .h1-break { display: block; }
+    .record img{width:120px;height:auto;border-radius:8px;object-fit:cover}.record .meta{text-align:left;font-size:0.95em}.record .meta b{display:block;color:var(--primary-color)}
+    @media(max-width:600px){.record{flex-direction:column;align-items:flex-start}button{width:100%}}
+  </style>
 </head>
 <body>
 
-    <h1>Thám tử AI</h1>
-    <h1>Nhận dạng Động vật</h1>
-    <h2>Giáo viên: Nguyễn Thị Thúy An</h2>
-    <p>Trường Tiểu học B Hòa Lạc</p>
+  <h1>Thám tử AI<span class="h1-break">Nhận dạng Động vật</span></h1>
+  <h2>Giáo viên: Nguyễn Thị Thúy An</h2>
+  <p>Trường Tiểu học B Hòa Lạc</p>
 
-    <div class="controls">
-        <!-- Hidden using the HTML hidden attribute (still present in DOM) -->
-        <button id="start-button" hidden>Bắt đầu (Camera sau)</button>
+  <div class="controls">
+    <button id="start-button" hidden>Bắt đầu (Camera sau)</button>
+    <button id="upload-button" class="btn-upload">Chụp/Tải ảnh lên</button>
+    <button id="library-button" class="btn-library">Thư viện</button>
+    <button id="camera-button" hidden>Quay lại Camera</button>
+    <input type="file" id="file-input" accept="image/*" style="display:none">
+  </div>
 
-        <button id="upload-button" class="btn-upload">Chụp ảnh hoặc Tải ảnh lên</button>
+  <div id="webcam-container"></div>
+  <div id="label-container"></div>
 
-        <!-- Hidden using the HTML hidden attribute (still present in DOM) -->
-        <button id="camera-button" hidden>Quay lại Camera</button>
+  <div class="phan-hoi-khoa-hoc">
+    <h2>💡 Thông tin Khoa học về Loài vật</h2>
+    <p id="khoa-hoc-info">Nhấn "Chụp/Tải ảnh lên" để cho AI thấy một loài vật và bắt đầu phân tích...</p>
+    <div id="status-line" class="status">Sẵn sàng.</div>
+  </div>
 
-        <input type="file" id="file-input" accept="image/*" style="display:none">
+  <!-- popup -->
+  <div id="popup-overlay" class="popup-overlay" aria-hidden="true">
+    <div class="popup">
+      <h3 id="popup-title">LOÀI: ??? <span id="popup-percent" style="font-weight:700;color:var(--secondary-color);margin-left:6px;"></span></h3>
+      <div class="info" id="popup-info"></div>
+      <div style="text-align:right;margin-top:12px;"><button id="popup-close">Đóng</button></div>
     </div>
+  </div>
 
-    <div id="webcam-container"></div>
-    <div id="label-container"></div>
-    
-    <div class="phan-hoi-khoa-hoc">
-        <h2>💡 Thông tin Khoa học về Loài vật</h2>
-        <p id="khoa-hoc-info">Nhấn "Chụp ảnh hoặc Tải ảnh lên" để cho AI thấy một loài vật và bắt đầu phân tích...</p>
+  <!-- student modal -->
+  <div id="student-modal" class="modal" aria-hidden="true">
+    <div class="card">
+      <h3>Nhập thông tin học sinh</h3>
+      <label>Họ và tên</label>
+      <input id="student-name" type="text" placeholder="Ví dụ: Nguyễn Văn A" />
+      <label>Lớp</label>
+      <input id="student-class" type="text" placeholder="Ví dụ: 4A" />
+      <div style="text-align:right;"><button id="student-save">Lưu</button></div>
     </div>
+  </div>
 
-    <!-- Popup overlay -->
-    <div id="popup-overlay" class="popup-overlay" role="dialog" aria-modal="true" aria-hidden="true">
-        <div class="popup" id="popup">
-            <h3 id="popup-title">LOÀI: ??? <span class="percent" id="popup-percent"></span></h3>
-            <div class="info" id="popup-info"></div>
-            <div class="actions">
-                <button class="btn-close" id="popup-close">Đóng</button>
-            </div>
-        </div>
+  <!-- library -->
+  <div id="library-overlay" class="library-overlay" aria-hidden="true">
+    <div class="library">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3>Thư viện nhận dạng (chung)</h3>
+        <div><button id="library-refresh">Làm mới</button><button id="library-close" style="margin-left:8px">Đóng</button></div>
+      </div>
+      <div id="library-list" style="margin-top:10px"></div>
     </div>
+  </div>
 
-    <script type="text/javascript">
-        // URL MÔ HÌNH
-        const URL = "https://teachablemachine.withgoogle.com/models/I2s7iGcQr/"; 
+<script>
+/* ========== CONFIG ========== */
+const CLOUDINARY_CLOUD_NAME = 'dlb55gph5';
+const CLOUDINARY_UNSIGNED_UPLOAD_PRESET = 'unsigned_preset'; // replace with your actual preset name
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7TDQIOXHRCwxt7turz6oR6UYkh8M8mT-cS3tOGCmpVitYCOuXOsuU3nfz9_bqe3pv/exec';
+const MODEL_URL = "https://teachablemachine.withgoogle.com/models/I2s7iGcQr/";
 
-        let model = null;
-        let maxPredictions = 0;
+/* ========== State & DOM ========== */
+let model = null, maxPredictions = 0;
+let currentStream = null, videoElem = null, uploadedImageElem = null, uploadedFile = null;
+let smallPredictSize = 224; // size used for fast prediction (smaller -> faster)
 
-        // video / stream state
-        let currentStream = null;
-        let videoElem = null;
-        let uploadedImageElem = null; // if user uploads an image
+const uploadBtn = document.getElementById('upload-button');
+const fileInput = document.getElementById('file-input');
+const libraryBtn = document.getElementById('library-button');
+const libraryOverlay = document.getElementById('library-overlay');
+const libraryList = document.getElementById('library-list');
+const libraryClose = document.getElementById('library-close');
+const libraryRefresh = document.getElementById('library-refresh');
 
-        // mặc định là camera phía sau (we keep the logic, but the start/camera buttons are hidden)
-        let currentFacingMode = 'environment';
+const popupOverlay = document.getElementById('popup-overlay');
+const popupClose = document.getElementById('popup-close');
+const popupTitle = document.getElementById('popup-title');
+const popupPercent = document.getElementById('popup-percent');
+const popupInfo = document.getElementById('popup-info');
 
-        // controls (buttons still present in DOM but hidden)
-        const startBtn = document.getElementById('start-button'); // hidden
-        const uploadBtn = document.getElementById('upload-button');
-        const cameraBtn = document.getElementById('camera-button'); // hidden
-        const fileInput = document.getElementById('file-input');
+const studentModal = document.getElementById('student-modal');
+const studentSaveBtn = document.getElementById('student-save');
+const studentNameInput = document.getElementById('student-name');
+const studentClassInput = document.getElementById('student-class');
 
-        // Keep event handlers attached even though start and camera are hidden
-        startBtn.addEventListener('click', () => startCamera(currentFacingMode));
-        uploadBtn.addEventListener('click', () => fileInput.click());
-        cameraBtn.addEventListener('click', async () => {
-            // hide any uploaded image and restart camera if needed (button is hidden in UI)
-            if (uploadedImageElem) {
-                uploadedImageElem.remove();
-                uploadedImageElem = null;
-            }
-            // ensure cameraBtn remains hidden
-            cameraBtn.hidden = true;
-            await startCamera(currentFacingMode);
-        });
-        fileInput.addEventListener('change', async (e) => {
-            const file = e.target.files && e.target.files[0];
-            if (!file) return;
-            // stop camera if running
-            await stopCurrentStream();
-            handleUploadFile(file);
-            // reset file input so same file can be selected again if needed
-            fileInput.value = "";
-        });
+const statusLine = document.getElementById('status-line');
+const infoElement = document.getElementById('khoa-hoc-info');
+const labelContainer = document.getElementById('label-container');
 
-        // popup elements
-        const popupOverlay = document.getElementById('popup-overlay');
-        const popupTitle = document.getElementById('popup-title');
-        const popupPercent = document.getElementById('popup-percent');
-        const popupInfo = document.getElementById('popup-info');
-        const popupClose = document.getElementById('popup-close');
+function setStatus(text, isError=false) {
+  statusLine.textContent = text || '';
+  statusLine.className = 'status' + (isError ? ' error' : '');
+  console.log('[STATUS]', text);
+}
 
-        popupClose.addEventListener('click', hidePopup);
-        popupOverlay.addEventListener('click', (e) => {
-            if (e.target === popupOverlay) hidePopup();
-        });
+/* ========== Student info storage ========== */
+function getStudentInfo() {
+  try { const r = localStorage.getItem('studentInfo'); return r ? JSON.parse(r) : null; } catch(e){ return null; }
+}
+function saveStudentInfoToDevice(obj) { localStorage.setItem('studentInfo', JSON.stringify(obj)); }
+function ensureStudentInfoBeforeAction() {
+  const s = getStudentInfo();
+  if (!s || !s.name || !s.class) {
+    studentModal.classList.add('show');
+    studentModal.setAttribute('aria-hidden','false');
+    return false;
+  }
+  return true;
+}
+studentSaveBtn.addEventListener('click', () => {
+  const n = (studentNameInput.value||'').trim();
+  const c = (studentClassInput.value||'').trim();
+  if (!n || !c) { alert('Vui lòng nhập họ tên và lớp học.'); return; }
+  saveStudentInfoToDevice({ name: n, class: c });
+  studentModal.classList.remove('show');
+  studentModal.setAttribute('aria-hidden','true');
+  setStatus('Thông tin học sinh đã lưu.');
+});
 
-        // debounce/show control to avoid spamming popups
-        let lastShownKey = null;
-        let lastShownTime = 0;
-        const POPUP_MIN_INTERVAL_MS = 4000; // ít nhất 4s giữa hai popup cùng loài
+/* Show modal on first visit */
+window.addEventListener('load', () => {
+  const info = getStudentInfo();
+  if (!info || !info.name || !info.class) {
+    studentModal.classList.add('show');
+    studentModal.setAttribute('aria-hidden','false');
+  }
+  setStatus('Sẵn sàng. Trang đang tải mô hình trong nền...');
+  // Preload model to speed up later predictions
+  ensureModelLoaded().catch(err => console.warn('Model preload failed', err));
+});
 
-        // Tải model (1 lần)
-        async function ensureModelLoaded() {
-            if (!model) {
-                document.getElementById('khoa-hoc-info').innerText = 'Đang tải mô hình...';
-                const modelURL = URL + "model.json";
-                const metadataURL = URL + "metadata.json";
-                model = await tmImage.load(modelURL, metadataURL);
-                maxPredictions = model.getTotalClasses();
-                // tạo label container
-                const labelContainer = document.getElementById("label-container");
-                labelContainer.innerHTML = '';
-                for (let i = 0; i < maxPredictions; i++) {
-                    labelContainer.appendChild(document.createElement("div"));
-                }
-            }
+/* ========== Model load & helpers ========== */
+async function ensureModelLoaded() {
+  if (model) return;
+  try {
+    setStatus('Đang tải mô hình (sẵn sàng trước để nhanh hơn)...');
+    model = await tmImage.load(MODEL_URL + 'model.json', MODEL_URL + 'metadata.json');
+    maxPredictions = model.getTotalClasses();
+    labelContainer.innerHTML = '';
+    for (let i=0;i<maxPredictions;i++) labelContainer.appendChild(document.createElement('div'));
+    setStatus('Mô hình đã sẵn sàng.');
+    console.log('Model loaded, classes=', maxPredictions);
+  } catch (err) {
+    console.error('Model load error', err);
+    setStatus('Lỗi khi tải mô hình (xem console).', true);
+    throw err;
+  }
+}
+
+/* ========== Camera helpers (unchanged) ========== */
+async function stopCurrentStream() {
+  if (currentStream) try { currentStream.getTracks().forEach(t=>t.stop()); } catch(e){ console.warn(e); }
+  currentStream = null;
+  if (videoElem) { try { videoElem.pause(); } catch(e){} if (videoElem.srcObject) videoElem.srcObject = null; try { videoElem.remove(); } catch(e){} videoElem = null; }
+  document.getElementById('webcam-container').innerHTML = '';
+}
+async function attachStreamToVideo(stream) {
+  currentStream = stream;
+  const video = document.createElement('video');
+  video.setAttribute('playsinline',''); video.playsInline=true; video.muted=true; video.autoplay=true;
+  video.width = 300; video.height = 300; video.style.maxWidth='100%';
+  video.srcObject = stream; await video.play();
+  videoElem = video; document.getElementById('webcam-container').innerHTML=''; document.getElementById('webcam-container').appendChild(videoElem);
+  window.requestAnimationFrame(loop);
+}
+async function startCamera(facingMode='environment') {
+  try {
+    await ensureModelLoaded();
+    if (typeof stopCurrentStream === 'function') await stopCurrentStream();
+    setStatus('Đang kết nối camera...');
+    let deviceId = null;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const hasLabels = devices.some(d=>d.label && d.label.length>0);
+      if (!hasLabels) {
+        const tmp = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal: facingMode } }, audio:false });
+        tmp.getTracks().forEach(t=>t.stop());
+      }
+      deviceId = await (async () => {
+        const devs = await navigator.mediaDevices.enumerateDevices();
+        const vids = devs.filter(d=>d.kind==='videoinput');
+        if (!vids.length) return null;
+        const prefer = vids.find(d=>d.label && /rear|back|environment|main/i.test(d.label));
+        return prefer ? prefer.deviceId : vids[vids.length-1].deviceId;
+      })();
+    } catch(e){ console.warn(e); }
+    if (deviceId) {
+      try { const stream = await navigator.mediaDevices.getUserMedia({ video:{ deviceId:{ exact: deviceId } }, audio:false }); await attachStreamToVideo(stream); return; } catch(e){ console.warn(e); }
+    }
+    try { const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal: facingMode } }, audio:false }); await attachStreamToVideo(stream); } catch(e){ console.error('startCamera error', e); setStatus('Không thể truy cập camera: '+(e.message||e), true); }
+  } catch(e){ console.error(e); setStatus('Lỗi camera/model (xem console).', true); }
+}
+
+/* ========== File upload flow (preview + prediction) ========== */
+uploadBtn.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', async (ev) => {
+  try {
+    const file = ev.target.files && ev.target.files[0]; if (!file) return;
+    uploadedFile = file;
+    await ensureModelLoaded();
+    if (typeof stopCurrentStream === 'function') await stopCurrentStream();
+    // preview
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataURL = evt.target.result;
+      const img = document.createElement('img'); img.src=dataURL; img.alt='Uploaded image'; img.width=300; img.height=300; img.style.maxWidth='100%';
+      document.getElementById('webcam-container').innerHTML=''; document.getElementById('webcam-container').appendChild(img);
+      uploadedImageElem = img;
+      img.onload = async () => {
+        setStatus('Ảnh đã tải. Đang phân tích nhanh...');
+        // use fast small-canvas prediction to speed up
+        await predictImageElement(img, { fast:true });
+      };
+    };
+    reader.readAsDataURL(file);
+  } catch(err) { console.error('file input error', err); setStatus('Lỗi khi đọc file (xem console).', true); } finally { fileInput.value=''; }
+});
+
+/* ========== Helpers ========== */
+function stripDiacritics(str){ if(!str) return str; return str.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').trim(); }
+
+/* infoMap: expand as needed; ensure long text preserved */
+// Thông tin khoa học (Vietnamese) — bao gồm cả key có dấu và không dấu
+// Dán object này vào file JS của bạn (ví dụ gán vào biến infoMap)
+// Các mô tả gồm: tên tiếng Việt, tên khoa học (nếu phổ biến), lớp/nhóm, mô tả, môi trường sống, chế độ ăn, sinh sản, vai trò sinh thái và ghi chú bảo tồn.
+
+const infoMap = {
+  // Bò
+  "bo": "Bò (Bos taurus) — Lớp: Động vật có vú (Mammalia). Bò là động vật nhai lại có kích thước lớn, thân hình đồ sộ, bốn chân khỏe và móng guốc. Chúng có hệ tiêu hóa chuyên biệt (dạ cỏ 4 ngăn) để tiêu hóa thức ăn thô như cỏ. Môi trường sống: đồng cỏ, trang trại, vùng nông nghiệp. Chế độ ăn: ăn cỏ, thực vật (động vật nhai lại). Sinh sản: đẻ con, thường một con/lứa, chăm sóc con bằng sữa mẹ. Vai trò sinh thái: là động vật tiêu thụ sơ cấp, ảnh hưởng lớn đến cấu trúc thảm thực vật; đóng góp cho nền nông nghiệp (sữa, thịt, kéo cày). Ghi chú: giống nuôi đã được thuần hóa; một số quần thể hoang dã có nguy cơ do săn bắt và mất môi trường sống.",
+  "bò": "Bò (Bos taurus) — Lớp: Động vật có vú (Mammalia). Bò là động vật nhai lại có kích thước lớn, thân hình đồ sộ, bốn chân khỏe và móng guốc. Chúng có hệ tiêu hóa chuyên biệt (dạ cỏ 4 ngăn) để tiêu hóa thức ăn thô như cỏ. Môi trường sống: đồng cỏ, trang trại, vùng nông nghiệp. Chế độ ăn: ăn cỏ, thực vật (động vật nhai lại). Sinh sản: đẻ con, thường một con/lứa, chăm sóc con bằng sữa mẹ. Vai trò sinh thái: là động vật tiêu thụ sơ cấp, ảnh hưởng lớn đến cấu trúc thảm thực vật; đóng góp cho nền nông nghiệp (sữa, thịt, kéo cày). Ghi chú: giống nuôi đã được thuần hóa; một số quần thể hoang dã có nguy cơ do săn bắt và mất môi trường sống.",
+
+  // Trâu
+  "trau": "Trâu nước (Bubalus bubalis) — Lớp: Động vật có vú. Trâu là động vật móng guốc, thường sống ở vùng ngập nước, đồng lầy hay ruộng lúa; cơ thể to khỏe, thích nghi tốt với môi trường ẩm. Chế độ ăn: thực vật, đặc biệt là cỏ và cây thủy sinh. Sinh sản: giống bò, đẻ con; trâu nuôi phục vụ lao động, sữa và thịt. Vai trò: quan trọng trong nông nghiệp truyền thống (kéo cày, làm ruộng). Ghi chú: có nhiều giống thuần hóa; quần thể hoang dã (trâu rừng) ở một số nơi bị đe dọa.",
+  "trâu": "Trâu nước (Bubalus bubalis) — Lớp: Động vật có vú. Trâu là động vật móng guốc, thường sống ở vùng ngập nước, đồng lầy hay ruộng lúa; cơ thể to khỏe, thích nghi tốt với môi trường ẩm. Chế độ ăn: thực vật, đặc biệt là cỏ và cây thủy sinh. Sinh sản: giống bò, đẻ con; trâu nuôi phục vụ lao động, sữa và thịt. Vai trò: quan trọng trong nông nghiệp truyền thống (kéo cày, làm ruộng). Ghi chú: có nhiều giống thuần hóa; quần thể hoang dã (trâu rừng) ở một số nơi bị đe dọa.",
+
+  // Heo
+  "heo": "Heo (Sus scrofa domesticus) — Lớp: Động vật có vú. Heo là loài ăn tạp, thân tròn, mũi cùn, chân ngắn; có khả năng thích nghi với nhiều môi trường sống. Môi trường: trang trại, bán hoang dã. Chế độ ăn: ăn tạp (thực vật, côn trùng, thức ăn do con người cung cấp). Sinh sản: mỗi lứa có nhiều con, thời kỳ mang thai ~114 ngày; chăm sóc con bằng sữa mẹ. Vai trò: nguồn thịt (lợn) và sản phẩm nông nghiệp; trong tự nhiên, heo hoang ảnh hưởng đến cấu trúc thảm thực vật. Ghi chú: heo nhà đã được thuần hóa; vấn đề dịch bệnh (ASF) và phúc lợi chăn nuôi là mối quan tâm.",
+  
+  // Chó
+  "cho": "Chó (Canis lupus familiaris) — Lớp: Động vật có vú. Chó là loài động vật đã được thuần hóa từ chó sói; có kích thước và hình thái rất đa dạng theo giống. Hành vi xã hội cao, khả năng học tập và hợp tác với con người. Môi trường sống: đa dạng — nhà cửa, nông thôn, đô thị. Chế độ ăn: ăn tạp, có thể tiêu thụ thức ăn chế biến cho chó. Sinh sản: đẻ con, thường vài con/lứa; quan hệ xã hội phức tạp. Vai trò: bảo vệ, làm bạn, dẫn đường, hỗ trợ công việc. Ghi chú: bảo tồn không áp dụng cho chó nhà; chó hoang/hoang dã có vấn đề quản lý quần thể.",
+  "chó": "Chó (Canis lupus familiaris) — Lớp: Động vật có vú. Chó là loài động vật đã được thuần hóa từ chó sói; có kích thước và hình thái rất đa dạng theo giống. Hành vi xã hội cao, khả năng học tập và hợp tác với con người. Môi trường sống: đa dạng — nhà cửa, nông thôn, đô thị. Chế độ ăn: ăn tạp, có thể tiêu thụ thức ăn chế biến cho chó. Sinh sản: đẻ con, thường vài con/lứa; quan hệ xã hội phức tạp. Vai trò: bảo vệ, làm bạn, dẫn đường, hỗ trợ công việc. Ghi chú: bảo tồn không áp dụng cho chó nhà; chó hoang/hoang dã có vấn đề quản lý quần thể.",
+
+  // Mèo
+  "meo": "Mèo (Felis catus) — Lớp: Động vật có vú. Mèo nhà là loài thú cưng phổ biến, có bản năng săn mồi mạnh mẽ; hình thể nhỏ gọn, linh hoạt, có móng sắc và thị lực tốt trong điều kiện ánh sáng yếu. Môi trường sống: trong nhà, khu đô thị, nông thôn. Chế độ ăn: ăn thịt/carnivorous (chuột, chim, côn trùng); trong nuôi nhốt được cho ăn thức ăn chế biến. Sinh sản: đẻ con, thường 2–6 con/lứa; chăm sóc con trong thời gian đầu. Vai trò: kiểm soát chuột, bạn đồng hành. Ghi chú: mèo nhà có thể ảnh hưởng tới động vật hoang dã nhỏ nếu thả rông.",
+  "mèo": "Mèo (Felis catus) — Lớp: Động vật có vú. Mèo nhà là loài thú cưng phổ biến, có bản năng săn mồi mạnh mẽ; hình thể nhỏ gọn, linh hoạt, có móng sắc và thị lực tốt trong điều kiện ánh sáng yếu. Môi trường sống: trong nhà, khu đô thị, nông thôn. Chế độ ăn: ăn thịt/carnivorous (chuột, chim, côn trùng); trong nuôi nhốt được cho ăn thức ăn chế biến. Sinh sản: đẻ con, thường 2–6 con/lứa; chăm sóc con trong thời gian đầu. Vai trò: kiểm soát chuột, bạn đồng hành. Ghi chú: mèo nhà có thể ảnh hưởng tới động vật hoang dã nhỏ nếu thả rông.",
+
+  // Chuột
+  "chuot": "Chuột (Rodentia — nhiều chi, ví dụ Rattus, Mus) — Lớp: Động vật có vú. Chuột là loài gặm nhấm có kích thước nhỏ đến trung bình, răng cửa phát triển liên tục để gặm nhấm. Môi trường sống: môi trường đồng ruộng, đô thị, nhà cửa, rừng... Chế độ ăn: ăn tạp — hạt, trái cây, thực phẩm thừa, thậm chí xác bã hữu cơ. Sinh sản: đẻ nhiều con, vòng đời nhanh, sinh sản liên tục theo điều kiện. Vai trò: phân hủy hữu cơ, nguồn thức ăn cho nhiều loài săn mồi, nhưng cũng là vật truyền bệnh và gây hại nông nghiệp. Ghi chú: kiểm soát quần thể cần an toàn sinh học để tránh dịch bệnh.",
+  "chuột": "Chuột (Rodentia — nhiều chi, ví dụ Rattus, Mus) — Lớp: Động vật có vú. Chuột là loài gặm nhấm có kích thước nhỏ đến trung bình, răng cửa phát triển liên tục để gặm nhấm. Môi trường sống: môi trường đồng ruộng, đô thị, nhà cửa, rừng... Chế độ ăn: ăn tạp — hạt, trái cây, thực phẩm thừa, thậm chí xác bã hữu cơ. Sinh sản: đẻ nhiều con, vòng đời nhanh, sinh sản liên tục theo điều kiện. Vai trò: phân hủy hữu cơ, nguồn thức ăn cho nhiều loài săn mồi, nhưng cũng là vật truyền bệnh và gây hại nông nghiệp. Ghi chú: kiểm soát quần thể cần an toàn sinh học để tránh dịch bệnh.",
+
+  // Gà
+  "ga": "Gà (Gallus gallus domesticus) — Lớp: Chim (Aves). Gà nhà được thuần hóa từ gà rừng đỏ; có cơ thể nhỏ đến trung bình, lông vũ, mỏ khỏe. Môi trường: trang trại, vườn nhà. Chế độ ăn: ăn tạp — hạt ngũ cốc, côn trùng, thức ăn hỗn hợp. Sinh sản: đẻ trứng; ấp trứng tạo con mới. Vai trò: cung cấp trứng, thịt; tham gia vào hệ sinh thái nông nghiệp bằng cách kiểm soát côn trùng. Ghi chú: nhiều giống nuôi với mục đích khác nhau (trứng, thịt, cảnh).",
+  "gà": "Gà (Gallus gallus domesticus) — Lớp: Chim (Aves). Gà nhà được thuần hóa từ gà rừng đỏ; có cơ thể nhỏ đến trung bình, lông vũ, mỏ khỏe. Môi trường: trang trại, vườn nhà. Chế độ ăn: ăn tạp — hạt ngũ cốc, côn trùng, thức ăn hỗn hợp. Sinh sản: đẻ trứng; ấp trứng tạo con mới. Vai trò: cung cấp trứng, thịt; tham gia vào hệ sinh thái nông nghiệp bằng cách kiểm soát côn trùng. Ghi chú: nhiều giống nuôi với mục đích khác nhau (trứng, thịt, cảnh).",
+
+  // Vịt
+  "vit": "Vịt (Anas platyrhynchos domesticus và các loài liên quan) — Lớp: Chim (Aves). Vịt nuôi thường sống gần nước, có màng chân bơi, mỏ dẹt thích nghi để đào bới thức ăn trong nước. Môi trường: ao hồ, ruộng lúa, ao nuôi. Chế độ ăn: thực vật nước, hạt, côn trùng nhỏ. Sinh sản: đẻ trứng; nuôi con non tự lập sớm. Vai trò: nguồn thực phẩm (thịt, trứng), nuôi thủy sản kết hợp. Ghi chú: một số loài vịt hoang dã có giá trị bảo tồn.",
+  "vịt": "Vịt (Anas platyrhynchos domesticus và các loài liên quan) — Lớp: Chim (Aves). Vịt nuôi thường sống gần nước, có màng chân bơi, mỏ dẹt thích nghi để đào bới thức ăn trong nước. Môi trường: ao hồ, ruộng lúa, ao nuôi. Chế độ ăn: thực vật nước, hạt, côn trùng nhỏ. Sinh sản: đẻ trứng; nuôi con non tự lập sớm. Vai trò: nguồn thực phẩm (thịt, trứng), nuôi thủy sản kết hợp. Ghi chú: một số loài vịt hoang dã có giá trị bảo tồn.",
+
+  // Chim (chung)
+  "chim": "Chim (Aves — nhóm rất đa dạng) — Lớp: Chim. Chim là động vật có lông vũ, đa phần có khả năng bay (không phải tất cả), đẻ trứng và có cấu trúc mỏ biến đổi theo chế độ ăn. Môi trường sống: từ rừng đến đô thị, núi, đồng bằng, vùng nước. Chế độ ăn: đa dạng (hạt, trái cây, côn trùng, mồi nhỏ). Sinh sản: đẻ trứng; nhiều loài xây tổ và nuôi con. Vai trò: thụ phấn, gieo rắc hạt, kiểm soát côn trùng, chỉ báo đa dạng sinh học. Ghi chú: cần xác định loài để thông tin chi tiết hơn.",
+  "chim": "Chim (Aves — nhóm rất đa dạng) — Lớp: Chim. Chim là động vật có lông vũ, đa phần có khả năng bay (không phải tất cả), đẻ trứng và có cấu trúc mỏ biến đổi theo chế độ ăn. Môi trường sống: từ rừng đến đô thị, núi, đồng bằng, vùng nước. Chế độ ăn: đa dạng (hạt, trái cây, côn trùng, mồi nhỏ). Sinh sản: đẻ trứng; nhiều loài xây tổ và nuôi con. Vai trò: thụ phấn, gieo rắc hạt, kiểm soát côn trùng, chỉ báo đa dạng sinh học. Ghi chú: cần xác định loài để thông tin chi tiết hơn.",
+
+  // Cá
+  "ca": "Cá (Pisces — nhóm rất đa dạng) — Lớp: Cá. Cá sống chủ yếu dưới nước, hô hấp bằng mang, bơi bằng vây; kích thước và hình thái rất đa dạng tùy loài. Môi trường sống: nước ngọt, nước mặn, nước lợ. Chế độ ăn: từ thực vật (thực vật phù du) đến động vật (côn trùng, tôm, cá nhỏ). Sinh sản: phần lớn đẻ trứng, một vài loài nuôi con theo một số mức độ. Vai trò: mắt xích quan trọng trong chuỗi thức ăn thủy sinh, nguồn thực phẩm cho con người. Ghi chú: cần xác định họ/loài để mô tả chính xác.",
+  "cá": "Cá (Pisces — nhóm rất đa dạng) — Lớp: Cá. Cá sống chủ yếu dưới nước, hô hấp bằng mang, bơi bằng vây; kích thước và hình thái rất đa dạng tùy loài. Môi trường sống: nước ngọt, nước mặn, nước lợ. Chế độ ăn: từ thực vật (thực vật phù du) đến động vật (côn trùng, tôm, cá nhỏ). Sinh sản: phần lớn đẻ trứng, một vài loài nuôi con theo một số mức độ. Vai trò: mắt xích quan trọng trong chuỗi thức ăn thủy sinh, nguồn thực phẩm cho con người. Ghi chú: cần xác định họ/loài để mô tả chính xác.",
+
+  // Ếch
+  "ech": "Ếch (Anura — các loài thuộc họ Ranidae và khác) — Lớp: Lưỡng cư (Amphibia). Ếch có thân ngắn, chân sau khỏe để nhảy, da ẩm; vòng đời thường có giai đoạn nòng nọc (ấu trùng sống dưới nước). Môi trường sống: ao, đầm, vùng ẩm ướt, rừng. Chế độ ăn: côn trùng và động vật không xương sống nhỏ (duy trì vai trò kiểm soát côn trùng). Sinh sản: đẻ trứng ở nước; phát triển qua giai đoạn nòng nọc. Vai trò: chỉ báo sức khỏe môi trường do da nhạy cảm với ô nhiễm. Ghi chú: nhiều loài ếch đang suy giảm do mất môi trường sống và ô nhiễm.",
+  "ếch": "Ếch (Anura — các loài thuộc họ Ranidae và khác) — Lớp: Lưỡng cư (Amphibia). Ếch có thân ngắn, chân sau khỏe để nhảy, da ẩm; vòng đời thường có giai đoạn nòng nọc (ấu trùng sống dưới nước). Môi trường sống: ao, đầm, vùng ẩm ướt, rừng. Chế độ ăn: côn trùng và động vật không xương sống nhỏ (duy trì vai trò kiểm soát côn trùng). Sinh sản: đẻ trứng ở nước; phát triển qua giai đoạn nòng nọc. Vai trò: chỉ báo sức khỏe môi trường do da nhạy cảm với ô nhiễm. Ghi chú: nhiều loài ếch đang suy giảm do mất môi trường sống và ô nhiễm.",
+
+  // Rắn
+  "ran": "Rắn (Serpentes — bộ Bò sát) — Lớp: Bò sát (Reptilia). Rắn có cơ thể dài, không chi; nhiều loài có vảy và có các phương thức săn mồi khác nhau (một số dùng nọc, một số siết). Môi trường sống: rừng, đồng cỏ, sa mạc, vùng đất ẩm; phân bố rộng. Chế độ ăn: chủ yếu là động vật có xương sống nhỏ (chuột, chim, lưỡng cư) hoặc trứng. Sinh sản: đẻ trứng hoặc đẻ con tùy loài. Vai trò: kiểm soát quần thể động vật gặm nhấm và cân bằng hệ sinh thái. Ghi chú: cần nhận diện loài để đánh giá mức độ nguy hiểm và bảo tồn.",
+  "rắn": "Rắn (Serpentes — bộ Bò sát) — Lớp: Bò sát (Reptilia). Rắn có cơ thể dài, không chi; nhiều loài có vảy và có các phương thức săn mồi khác nhau (một số dùng nọc, một số siết). Môi trường sống: rừng, đồng cỏ, sa mạc, vùng đất ẩm; phân bố rộng. Chế độ ăn: chủ yếu là động vật có xương sống nhỏ (chuột, chim, lưỡng cư) hoặc trứng. Sinh sản: đẻ trứng hoặc đẻ con tùy loài. Vai trò: kiểm soát quần thể động vật gặm nhấm và cân bằng hệ sinh thái. Ghi chú: cần nhận diện loài để đánh giá mức độ nguy hiểm và bảo tồn.",
+
+  // Thằn lằn / Thằn lằn (thanlan)
+  "thanlan": "Thằn lằn (Lacertilia/various families) — Lớp: Bò sát (Reptilia). Thằn lằn là nhóm đa dạng gồm nhiều loài có bốn chân, đuôi dài, da vảy; hoạt động bằng cách tắm nắng để điều hòa nhiệt độ. Môi trường: đá, rừng, sa mạc, vườn. Chế độ ăn: chủ yếu côn trùng và động vật không xương sống (một số loài ăn thực vật). Sinh sản: đẻ trứng hoặc đẻ con tùy loài. Vai trò: kiểm soát côn trùng, là mồi cho động vật lớn hơn. Ghi chú: một số loài độc đáo có khả năng tự đứt đuôi để thoát hiểm.",
+  "thằn lằn": "Thằn lằn (Lacertilia/various families) — Lớp: Bò sát (Reptilia). Thằn lằn là nhóm đa dạng gồm nhiều loài có bốn chân, đuôi dài, da vảy; hoạt động bằng cách tắm nắng để điều hòa nhiệt độ. Môi trường: đá, rừng, sa mạc, vườn. Chế độ ăn: chủ yếu côn trùng và động vật không xương sống (một số loài ăn thực vật). Sinh sản: đẻ trứng hoặc đẻ con tùy loài. Vai trò: kiểm soát côn trùng, là mồi cho động vật lớn hơn. Ghi chú: một số loài độc đáo có khả năng tự đứt đuôi để thoát hiểm.",
+
+  // Kì nhông (kì nhông / kinhong)
+  "kinhong": "Kì nhông (Agamidae/Varanus family etc.) — Lớp: Bò sát. 'Kì nhông' thường dùng cho các loài thằn lằn lớn như kỳ nhông có đuôi dài, thân dẹt; một số loài (ví dụ rồng đất) có màu sắc nổi bật. Môi trường: rừng, vùng núi, bán hoang mạc. Chế độ ăn: côn trùng, động vật nhỏ, đôi khi trái cây. Sinh sản: đẻ trứng; một số loài có hành vi bảo vệ tổ. Vai trò: ăn côn trùng và góp phần điều hòa quần thể. Ghi chú: cần xác định chi/loài để mô tả chính xác.",
+  "kì nhông": "Kì nhông (Agamidae/Varanus family etc.) — Lớp: Bò sát. 'Kì nhông' thường dùng cho các loài thằn lằn lớn như kỳ nhông có đuôi dài, thân dẹt; một số loài (ví dụ rồng đất) có màu sắc nổi bật. Môi trường: rừng, vùng núi, bán hoang mạc. Chế độ ăn: côn trùng, động vật nhỏ, đôi khi trái cây. Sinh sản: đẻ trứng; một số loài có hành vi bảo vệ tổ. Vai trò: ăn côn trùng và góp phần điều hòa quần thể. Ghi chú: cần xác định chi/loài để mô tả chính xác.",
+
+  // Bướm
+  "buom": "Bướm (Lepidoptera) — Lớp: Côn trùng (Insecta). Bướm là côn trùng có cánh phủ vảy màu sắc; vòng đời có biến thái hoàn chỉnh: trứng → sâu bướm (ấu trùng) → nhộng → trưởng thành. Môi trường sống: hoa đồng, vườn, rừng; gắn với nguồn hoa để kiếm mật. Chế độ ăn trưởng thành: mật hoa; ấu trùng ăn lá cây chủ. Vai trò: thụ phấn, chỉ báo đa dạng sinh học. Ghi chú: nhiều loài phụ thuộc vào loài cây ký chủ cho ấu trùng.",
+  "bướm": "Bướm (Lepidoptera) — Lớp: Côn trùng (Insecta). Bướm là côn trùng có cánh phủ vảy màu sắc; vòng đời có biến thái hoàn chỉnh: trứng → sâu bướm (ấu trùng) → nhộng → trưởng thành. Môi trường sống: hoa đồng, vườn, rừng; gắn với nguồn hoa để kiếm mật. Chế độ ăn trưởng thành: mật hoa; ấu trùng ăn lá cây chủ. Vai trò: thụ phấn, chỉ báo đa dạng sinh học. Ghi chú: nhiều loài phụ thuộc vào loài cây ký chủ cho ấu trùng.",
+
+  // Ong
+  "ong": "Ong (Apidae và họ liên quan) — Lớp: Côn trùng. Ong là côn trùng có vai trò quan trọng trong thụ phấn; nhiều loài sống thành đàn (ong mật) với cấu trúc xã hội phức tạp. Môi trường: vườn hoa, rừng, cánh đồng. Chế độ ăn: mật hoa và phấn hoa. Sinh sản: tổ chức xã hội phức tạp, ong chúa đảm nhiệm sinh sản. Vai trò: thụ phấn cây ăn quả và hoa, sản xuất mật. Ghi chú: suy giảm quần thể ong do thuốc trừ sâu và mất môi trường sống là mối lo ngại toàn cầu.",
+  
+  // Kiến
+  "kien": "Kiến (Formicidae) — Lớp: Côn trùng. Kiến là côn trùng xã hội, sống thành đàn lớn với phân công lao động; thân nhỏ, khỏe, có nhiều loài thích nghi với nhiều môi trường. Môi trường: đất, rừng, đô thị. Chế độ ăn: rất đa dạng — phấn, mật, côn trùng, chất hữu cơ; một số loài chăn rệp để lấy mật. Sinh sản: cấu trúc cộng đồng với kiến chúa sinh sản. Vai trò: phân hủy hữu cơ, cải tạo đất, kiểm soát dịch hại. Ghi chú: một số loài gây hại nông nghiệp hoặc xâm hại khu vực mới.",
+  "kiến": "Kiến (Formicidae) — Lớp: Côn trùng. Kiến là côn trùng xã hội, sống thành đàn lớn với phân công lao động; thân nhỏ, khỏe, có nhiều loài thích nghi với nhiều môi trường. Môi trường: đất, rừng, đô thị. Chế độ ăn: rất đa dạng — phấn, mật, côn trùng, chất hữu cơ; một số loài chăn rệp để lấy mật. Sinh sản: cấu trúc cộng đồng với kiến chúa sinh sản. Vai trò: phân hủy hữu cơ, cải tạo đất, kiểm soát dịch hại. Ghi chú: một số loài gây hại nông nghiệp hoặc xâm hại khu vực mới.",
+
+  // Gián
+  "gian": "Gián (Blattodea) — Lớp: Côn trùng. Gián là loài côn trùng sống được trong điều kiện khắc nghiệt, thường hoạt động về đêm; cơ thể dẹp, chân chạy nhanh. Môi trường: nhà ở, khu đô thị, môi trường ẩm. Chế độ ăn: xác hữu cơ, vụn thực phẩm. Sinh sản: đẻ trứng trong bao ootheca; sinh sản nhanh. Vai trò: phân hủy hữu cơ nhưng cũng là vật gây hại và truyền bệnh trong môi trường sống con người. Ghi chú: kiểm soát sinh vật gây hại quan trọng trong môi trường sinh hoạt.",
+  "gián": "Gián (Blattodea) — Lớp: Côn trùng. Gián là loài côn trùng sống được trong điều kiện khắc nghiệt, thường hoạt động về đêm; cơ thể dẹp, chân chạy nhanh. Môi trường: nhà ở, khu đô thị, môi trường ẩm. Chế độ ăn: xác hữu cơ, vụn thực phẩm. Sinh sản: đẻ trứng trong bao ootheca; sinh sản nhanh. Vai trò: phân hủy hữu cơ nhưng cũng là vật gây hại và truyền bệnh trong môi trường sống con người. Ghi chú: kiểm soát sinh vật gây hại quan trọng trong môi trường sinh hoạt.",
+
+  // Sâu (sâu bướm / sâu non)
+  "sau": "Sâu (ấu trùng côn trùng, ví dụ sâu bướm, sâu bọ) — Lớp: Côn trùng. 'Sâu' thường chỉ giai đoạn ấu trùng của bướm, bọ cánh mềm, bọ rầy... Chúng có thân mềm, ăn lá và mô thực vật, có vai trò cả tích cực (mồi cho chim, ký sinh) và tiêu cực (gây hại cây trồng). Môi trường: thực vật và môi trường trồng trọt. Sinh sản: phát triển qua biến thái; ấu trùng -> nhộng -> trưởng thành. Vai trò: thành phần quan trọng của chuỗi thức ăn; nhiều loài sâu là dịch hại nông nghiệp. Ghi chú: quản lý sâu hại dựa trên sinh thái học và kiểm soát sinh học.",
+  "sâu": "Sâu (ấu trùng côn trùng, ví dụ sâu bướm, sâu bọ) — Lớp: Côn trùng. 'Sâu' thường chỉ giai đoạn ấu trùng của bướm, bọ cánh mềm, bọ rầy... Chúng có thân mềm, ăn lá và mô thực vật, có vai trò cả tích cực (mồi cho chim, ký sinh) và tiêu cực (gây hại cây trồng). Môi trường: thực vật và môi trường trồng trọt. Sinh sản: phát triển qua biến thái; ấu trùng -> nhộng -> trưởng thành. Vai trò: thành phần quan trọng của chuỗi thức ăn; nhiều loài sâu là dịch hại nông nghiệp. Ghi chú: quản lý sâu hại dựa trên sinh thái học và kiểm soát sinh học."
+};
+
+
+
+/* ========== Popup helpers (ensure full text visible) ========== */
+let lastShownKey=null,lastShownTime=0,POPUP_MIN_INTERVAL_MS=4000;
+function showPopup(animalName, percent, infoText) {
+  const now = Date.now();
+  const key = (animalName||'').toLowerCase().trim();
+  if (lastShownKey === key && (now - lastShownTime) < POPUP_MIN_INTERVAL_MS) return;
+  lastShownKey = key; lastShownTime = now;
+  popupTitle.textContent = `LOÀI: ${animalName.toUpperCase()}`;
+  popupPercent.textContent = `${percent}%`;
+  // preserve line breaks and long text
+  popupInfo.textContent = infoText || '';
+  popupOverlay.classList.add('show'); popupOverlay.setAttribute('aria-hidden','false');
+}
+function hidePopup(){ popupOverlay.classList.remove('show'); popupOverlay.setAttribute('aria-hidden','true'); }
+popupClose.addEventListener('click', hidePopup);
+popupOverlay.addEventListener('click', (e)=>{ if(e.target===popupOverlay) hidePopup(); });
+
+/* ========== Prediction + saving logic (fast + background save) ========== */
+async function predictImageElement(imgElem, opts = { fast:false }) {
+  if (!model) return;
+  try {
+    setStatus('Đang phân tích...');
+    // Fast prediction: draw to small canvas to speed up model.predict
+    const smallCanvas = document.createElement('canvas');
+    const s = smallPredictSize;
+    smallCanvas.width = s; smallCanvas.height = s;
+    const sx = imgElem.naturalWidth || imgElem.width;
+    const sy = imgElem.naturalHeight || imgElem.height;
+    // Draw image scaled into small square while preserving aspect by covering
+    const ctx = smallCanvas.getContext('2d');
+    // Fit image into square (cover)
+    const ratio = Math.max(s / sx, s / sy);
+    const dw = sx * ratio, dh = sy * ratio;
+    ctx.drawImage(imgElem, (s - dw) / 2, (s - dh) / 2, dw, dh);
+
+    // quick predict on smallCanvas
+    const prediction = await model.predict(smallCanvas);
+    // find highest
+    let highest = { className:'Chưa rõ', probability:0 };
+    for (let i=0;i<prediction.length;i++){
+      const p = prediction[i];
+      const pct = (p.probability*100).toFixed(1)+'%';
+      const child = labelContainer.childNodes[i];
+      if (child) child.innerHTML = `${p.className}: <strong>${pct}</strong>`;
+      if (p.probability > highest.probability) highest = p;
+    }
+
+    console.log('Fast prediction result:', highest);
+
+    if (highest.probability > 0.7) {
+      const name = String(highest.className || '').trim();
+      const percent = (highest.probability * 100).toFixed(1);
+      const keyRaw = name.toLowerCase();
+      const keyStripped = stripDiacritics(keyRaw);
+      const classInfo = infoMap[keyRaw] || infoMap[keyStripped] || '';
+      // Immediately show info & popup for responsiveness
+      if (classInfo) infoElement.innerHTML = `<strong>Loài: ${name.toUpperCase()}</strong><br>${classInfo}`;
+      else infoElement.innerHTML = `<strong>Loài: ${name.toUpperCase()}</strong>`;
+
+      showPopup(name, percent, classInfo);
+
+      // Background save (do not block UI). Ensure student info exists before trying to save.
+      if (!ensureStudentInfoBeforeAction()) {
+        setStatus('Vui lòng nhập thông tin học sinh để lưu hình ảnh (bạn vẫn có thể xem kết quả).');
+      } else {
+        setStatus('Đang lưu vào Thư viện (nền)...');
+        // prepare blob (prefer original file)
+        let blobToUpload = null;
+        if (uploadedFile instanceof File) blobToUpload = uploadedFile;
+        else {
+          // convert to a reasonable upload size (not too large)
+          const upCanvas = document.createElement('canvas');
+          const maxSide = 1024;
+          const iw = imgElem.naturalWidth || imgElem.width;
+          const ih = imgElem.naturalHeight || imgElem.height;
+          const scale = Math.min(1, maxSide / Math.max(iw, ih));
+          upCanvas.width = Math.round(iw * scale);
+          upCanvas.height = Math.round(ih * scale);
+          upCanvas.getContext('2d').drawImage(imgElem, 0, 0, upCanvas.width, upCanvas.height);
+          blobToUpload = await new Promise(r => upCanvas.toBlob(r, 'image/jpeg', 0.85));
         }
 
-        // enumerateDevices để tìm deviceId phù hợp (ưu tiên rear)
-        async function getDeviceIdByFacing(preferredFacing = 'environment') {
-            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return null;
+        // call upload/save but do not await to keep UI snappy
+        uploadToCloudinaryAndSave(blobToUpload, name, percent, prediction.map(p=>({ className: p.className, probability: p.probability })))
+          .then(() => { setStatus('Đã lưu vào Thư viện.'); if (libraryOverlay.classList.contains('show')) loadLibraryOnce(); })
+          .catch(err => { console.error('Background save error', err); setStatus('Lưu vào Thư viện thất bại (xem console).', true); });
+      }
+    } else {
+      infoElement.innerHTML = 'Xác suất không đủ cao. Vui lòng thử ảnh rõ hơn.';
+      setStatus('Xác suất thấp. Thử ảnh rõ hơn hoặc chụp lại.');
+    }
+  } catch (err) {
+    console.error('predictImageElement error', err);
+    setStatus('Lỗi khi phân tích ảnh (xem console).', true);
+  }
+}
 
-            let devices = await navigator.mediaDevices.enumerateDevices();
-            const hasLabels = devices.some(d => d.label && d.label.length > 0);
+/* ========== Cloudinary upload + Apps Script JSONP save ========== */
+function saveMetadataViaJSONP(params, callback) {
+  const query = Object.keys(params).map(k=>`${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&');
+  const cbName = 'cb_' + Math.random().toString(36).slice(2);
+  window[cbName] = function(result) { try { callback && callback(null, result); } finally { delete window[cbName]; script.remove(); } };
+  const script = document.createElement('script');
+  script.src = `${APPS_SCRIPT_URL}?${query}&callback=${cbName}`;
+  script.onerror = function(e) { callback && callback(new Error('JSONP request failed')); delete window[cbName]; script.remove(); };
+  document.body.appendChild(script);
+}
 
-            // Nếu chưa có quyền => request tạm để hiện dialog
-            if (!hasLabels) {
-                try {
-                    const tmpStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: preferredFacing } }, audio: false });
-                    tmpStream.getTracks().forEach(t => t.stop());
-                    devices = await navigator.mediaDevices.enumerateDevices();
-                } catch (err) {
-                    console.warn('Permission request failed:', err);
-                }
-            }
+async function uploadToCloudinaryAndSave(fileOrBlob, resultName, resultProb, rawPredictions) {
+  if (!fileOrBlob) throw new Error('No file/blob to upload');
+  // 1) Cloudinary unsigned upload
+  const uploadUrl = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+  const fd = new FormData();
+  fd.append('file', fileOrBlob);
+  fd.append('upload_preset', CLOUDINARY_UNSIGNED_UPLOAD_PRESET);
+  const cloudRes = await fetch(uploadUrl, { method: 'POST', body: fd });
+  if (!cloudRes.ok) {
+    const txt = await cloudRes.text();
+    throw new Error('Cloudinary upload failed: ' + cloudRes.status + ' ' + txt);
+  }
+  const cloudJson = await cloudRes.json();
+  const imageUrl = cloudJson.secure_url || cloudJson.url;
+  console.log('Cloudinary upload OK:', imageUrl);
 
-            const videoDevices = devices.filter(d => d.kind === 'videoinput');
-            if (videoDevices.length === 0) return null;
+  // 2) Save metadata via JSONP (to avoid CORS)
+  const student = getStudentInfo() || { name:'Unknown', class:'Unknown' };
+  const payload = {
+    student_name: student.name,
+    student_class: student.class,
+    image_url: imageUrl,
+    result_name: resultName,
+    result_prob: resultProb,
+    raw_predictions: JSON.stringify(rawPredictions || [])
+  };
 
-            // tìm label có rear/back/environment/main
-            const prefer = videoDevices.find(d => d.label && /rear|back|environment|main/i.test(d.label));
-            if (prefer) return prefer.deviceId;
+  return new Promise((resolve, reject) => {
+    saveMetadataViaJSONP(payload, (err, res) => {
+      if (err) { console.error('JSONP error', err); return reject(err); }
+      console.log('Apps Script JSONP response', res);
+      resolve({ cloud: cloudJson, sheet: res });
+    });
+  });
+}
 
-            // nếu ko tìm được label phù hợp, thường thiết bị cuối cùng là rear trên nhiều máy
-            return videoDevices[videoDevices.length - 1].deviceId;
-        }
+/* ========== Library load & render ========== */
+async function loadLibraryOnce() {
+  libraryList.innerHTML = '<p>Đang tải...</p>';
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, { method: 'GET' });
+    if (!res.ok) { const t = await res.text(); console.error('Load library error', res.status, t); libraryList.innerHTML = '<p>Không thể tải thư viện (xem console).</p>'; return; }
+    const data = await res.json();
+    renderLibrary(data || []);
+  } catch (err) {
+    console.error('loadLibraryOnce error', err);
+    libraryList.innerHTML = '<p>Không thể tải thư viện (xem console).</p>';
+  }
+}
+function renderLibrary(items) {
+  libraryList.innerHTML = '';
+  if (!items || items.length === 0) { libraryList.innerHTML = '<p>KHÔNG CÓ BẢN GHI</p>'; return; }
+  items.forEach(item => {
+    const rec = document.createElement('div'); rec.className='record';
+    const img = document.createElement('img'); img.src = item.image_url || ''; rec.appendChild(img);
+    const meta = document.createElement('div'); meta.className='meta';
+    const dateText = item.created_at ? new Date(item.created_at).toLocaleString() : '';
+    meta.innerHTML = `<b>${item.result_name || 'Không rõ'}</b>
+                      <div>Xác suất: ${item.result_prob || ''}%</div>
+                      <div>Học sinh: ${item.student_name || ''} - Lớp: ${item.student_class || ''}</div>
+                      <div>Thời gian: ${dateText}</div>`;
+    rec.appendChild(meta); libraryList.appendChild(rec);
+  });
+}
 
-        // dừng stream hiện tại
-        async function stopCurrentStream() {
-            if (currentStream) {
-                try {
-                    currentStream.getTracks().forEach(t => t.stop());
-                } catch (e) { console.warn(e); }
-                currentStream = null;
-            }
-            if (videoElem) {
-                try { videoElem.pause(); } catch(e) {}
-                if (videoElem.srcObject) videoElem.srcObject = null;
-                videoElem.remove();
-                videoElem = null;
-            }
-            document.getElementById('webcam-container').innerHTML = '';
-        }
+/* ========== UI handlers ========== */
+libraryBtn.addEventListener('click', ()=>{ libraryOverlay.classList.add('show'); libraryOverlay.setAttribute('aria-hidden','false'); loadLibraryOnce(); });
+libraryClose.addEventListener('click', ()=>{ libraryOverlay.classList.remove('show'); libraryOverlay.setAttribute('aria-hidden','true'); });
+libraryRefresh.addEventListener('click', loadLibraryOnce);
 
-        // Khởi động camera: ưu tiên deviceId nếu có, fallback facingMode
-        async function startCamera(facingMode = 'environment') {
-            currentFacingMode = facingMode;
-            try {
-                await ensureModelLoaded();
-                await stopCurrentStream();
+/* ========== Camera prediction loop ========== */
+async function loop() {
+  if (!model) { window.requestAnimationFrame(loop); return; }
+  try {
+    const source = videoElem;
+    if (source && !source.paused && !source.ended) {
+      const prediction = await model.predict(source);
+      let highest = { className:'Chưa rõ', probability:0 };
+      for (let i=0;i<prediction.length;i++){
+        const p = prediction[i];
+        const pct = (p.probability*100).toFixed(1)+'%';
+        const child = labelContainer.childNodes[i];
+        if (child) child.innerHTML = `${p.className}: <strong>${pct}</strong>`;
+        if (p.probability>highest.probability) highest = p;
+      }
+      if (highest.probability>0.7) {
+        const name=String(highest.className||'').trim(); const percent=(highest.probability*100).toFixed(1);
+        const keyRaw = name.toLowerCase(), keyStripped = stripDiacritics(keyRaw);
+        const classInfo = infoMap[keyRaw] || infoMap[keyStripped] || '';
+        if (classInfo) infoElement.innerHTML = `<strong>Loài: ${name.toUpperCase()}</strong><br>${classInfo}`; else infoElement.innerHTML = `<strong>Loài: ${name.toUpperCase()}</strong>`;
+        showPopup(name, percent, classInfo);
+      } else {
+        infoElement.innerHTML = 'Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.';
+      }
+    }
+  } catch(err) { console.warn('loop error', err); }
+  window.requestAnimationFrame(loop);
+}
 
-                document.getElementById('khoa-hoc-info').innerText = 'Đang kết nối camera (mặc định: camera sau)...';
-
-                // Thử tìm deviceId tương ứng
-                let deviceId = null;
-                try {
-                    deviceId = await getDeviceIdByFacing(facingMode);
-                } catch (e) {
-                    console.warn('getDeviceIdByFacing lỗi:', e);
-                }
-
-                // Nếu tìm được deviceId, dùng exact deviceId
-                if (deviceId) {
-                    try {
-                        const stream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: deviceId } }, audio: false });
-                        await attachStreamToVideo(stream);
-                        document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera phía sau. Đang nhận dạng...';
-                        // keep camera button hidden
-                        cameraBtn.hidden = true;
-                        return;
-                    } catch (err) {
-                        console.warn('getUserMedia với deviceId thất bại, chuyển sang facingMode:', err);
-                    }
-                }
-
-                // Fallback: dùng facingMode ideal
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: false });
-                    await attachStreamToVideo(stream);
-                    document.getElementById('khoa-hoc-info').innerText = 'Đã kết nối camera (facingMode). Đang nhận dạng...';
-                    cameraBtn.hidden = true;
-                    return;
-                } catch (err) {
-                    console.error('getUserMedia facingMode thất bại:', err);
-                    document.getElementById('khoa-hoc-info').innerText = 'Không thể truy cập camera: ' + (err.message || err);
-                }
-            } catch (err) {
-                console.error('startCamera lỗi:', err);
-                document.getElementById('khoa-hoc-info').innerText = 'Lỗi khi khởi tạo: ' + (err.message || err);
-            }
-        }
-
-        // Gán stream vào thẻ video và bắt đầu vòng lặp
-        async function attachStreamToVideo(stream) {
-            currentStream = stream;
-            const video = document.createElement('video');
-            video.setAttribute('playsinline', ''); // rất quan trọng cho iOS
-            video.playsInline = true;
-            video.muted = true;
-            video.autoplay = true;
-            video.width = 300;
-            video.height = 300;
-            video.style.maxWidth = '100%';
-            video.srcObject = stream;
-
-            // đợi play để video ready
-            await video.play();
-
-            videoElem = video;
-            document.getElementById('webcam-container').innerHTML = '';
-            document.getElementById('webcam-container').appendChild(videoElem);
-
-            // bắt đầu vòng lặp predict
-            window.requestAnimationFrame(loop);
-        }
-
-        // Xử lý file ảnh upload
-        async function handleUploadFile(file) {
-            if (!file) return;
-            await ensureModelLoaded();
-
-            const reader = new FileReader();
-            reader.onload = async function(evt) {
-                const dataURL = evt.target.result;
-                // tạo img element hiển thị ảnh upload
-                const img = document.createElement('img');
-                img.src = dataURL;
-                img.alt = 'Uploaded image';
-                img.width = 300;
-                img.height = 300;
-                img.style.maxWidth = '100%';
-
-                // xóa vùng hiển thị cũ và hiển thị ảnh upload
-                document.getElementById('webcam-container').innerHTML = '';
-                document.getElementById('webcam-container').appendChild(img);
-
-                uploadedImageElem = img;
-                // keep cameraBtn hidden by design
-                cameraBtn.hidden = true;
-
-                // chờ ảnh load xong trước khi predict
-                img.onload = async () => {
-                    await predictImageElement(img);
-                };
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Hỗ trợ loại bỏ dấu để so khớp nhãn linh hoạt hơn
-        function stripDiacritics(str) {
-            if (!str) return str;
-            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g,'d').replace(/Đ/g,'D').trim();
-        }
-
-        // Bản đồ thông tin dùng key không dấu để tránh mismatch
-        const infoMap = {
-            "bo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
-            "bò": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng (thường là), móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
-            "trau": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
-            "trâu": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có sừng lớn, móng guốc chẵn. Chức năng: Sinh vật tiêu thụ bậc 1 (ăn cỏ/thực vật).",
-            "heo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, da dày, mõm to. Chức năng: Sinh vật ăn tạp.",
-            "cho": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn hỗn hợp).",
-            "chó": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có bộ lông bao phủ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2 (ăn thịt/thức ăn hỗn hợp).",
-            "meo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2.",
-            "mèo": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, là loài săn mồi nhỏ. Chức năng: Chủ yếu là sinh vật tiêu thụ bậc 2.",
-            "chuot": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật ăn tạp, đóng vai trò tiêu thụ bậc 1/2.",
-            "chuột": "Thuộc lớp Động vật có vú. Đặc điểm: Đẻ con, nuôi con bằng sữa mẹ, có răng cửa lớn. Chức năng: Sinh vật ăn tạp, đóng vai trò tiêu thụ bậc 1/2.",
-            "ga": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
-            "gà": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ và 2 chân. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
-            "vit": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
-            "vịt": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có mỏ dẹt và chân có màng bơi. Chức năng: Sinh vật tiêu thụ bậc 1 và 2.",
-            "chim": "Thuộc lớp Chim (Aves). Đặc điểm: Có lông vũ, đẻ trứng, có cánh và mỏ. Chức năng: Đa dạng, từ thụ phấn đến tiêu thụ bậc 2.",
-            "ca": "Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Mắt xích quan trọng trong chuỗi thức ăn dưới nước.",
-            "cá": "Thuộc lớp Cá. Đặc điểm: Sống dưới nước, bơi bằng vây, hô hấp bằng mang. Chức năng: Mắt xích quan trọng trong chuỗi thức ăn dưới nước.",
-            "ech": "Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn nòng nọc. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).",
-            "ếch": "Thuộc lớp Lưỡng cư. Đặc điểm: Da trần ẩm ướt, có giai đoạn nòng nọc. Chức năng: Sinh vật tiêu thụ bậc 2 (ăn côn trùng).",
-            "ran": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, động vật máu lạnh, không chân. Chức năng: Sinh vật tiêu thụ bậc 2/3.",
-            "rắn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, động vật máu lạnh, không chân. Chức năng: Sinh vật tiêu thụ bậc 2/3.",
-            "kinhong": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            "kì nhông": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có đuôi dài. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            "thanlan": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            "thằn lằn": "Thuộc lớp Bò sát. Đặc điểm: Da có vảy, có 4 chân nhỏ. Chức năng: Sinh vật tiêu thụ bậc 2.",
-            "buom": "Thuộc lớp Côn trùng. Đặc điểm: Có cánh lớn, trải qua biến thái. Chức năng: Thụ phấn.",
-            "bướm": "Thuộc lớp Côn trùng. Đặc điểm: Có cánh lớn, trải qua biến thái. Chức năng: Thụ phấn.",
-            "ong": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành đàn, thụ phấn. Chức năng: Thụ phấn và thu mật.",
-            "kien": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành tập đoàn. Chức năng: Phân hủy / ăn tạp.",
-            "kiến": "Thuộc lớp Côn trùng. Đặc điểm: Sống thành tập đoàn. Chức năng: Phân hủy / ăn tạp.",
-            "gian": "Thuộc lớp Côn trùng. Đặc điểm: Cơ thể dẹt, sống nơi ẩm thấp. Chức năng: Phân hủy / ăn tạp.",
-            "gián": "Thuộc lớp Côn trùng. Đặc điểm: Cơ thể dẹt, sống nơi ẩm thấp. Chức năng: Phân hủy / ăn tạp.",
-            "sau": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1.",
-            "sâu": "Thuộc lớp Côn trùng (ấu trùng). Đặc điểm: Cơ thể mềm, ăn lá. Chức năng: Sinh vật tiêu thụ bậc 1."
-        };
-
-        // Hiển thị popup với tên loài, phần trăm và thông tin
-        function showPopup(animalName, percent, infoText) {
-            const now = Date.now();
-            const key = (animalName || '').toLowerCase().trim();
-
-            // Nếu cùng loài đã show gần đây, bỏ qua (tránh spam)
-            if (lastShownKey === key && (now - lastShownTime) < POPUP_MIN_INTERVAL_MS) {
-                return;
-            }
-
-            lastShownKey = key;
-            lastShownTime = now;
-
-            popupTitle.textContent = `LOÀI: ${animalName.toUpperCase()}`;
-            popupPercent.textContent = `${percent}%`;
-            popupInfo.textContent = infoText || '';
-            popupOverlay.classList.add('show');
-            popupOverlay.setAttribute('aria-hidden', 'false');
-        }
-
-        function hidePopup() {
-            popupOverlay.classList.remove('show');
-            popupOverlay.setAttribute('aria-hidden', 'true');
-        }
-
-        // Predict cho 1 image element (cũng dùng cho upload)
-        async function predictImageElement(imgElem) {
-            if (!model) return;
-            try {
-                const prediction = await model.predict(imgElem);
-                let highestPrediction = { className: "Chưa rõ", probability: 0 };
-
-                for (let i = 0; i < maxPredictions; i++) {
-                    const probabilityPercent = (prediction[i].probability * 100).toFixed(1) + "%";
-                    const child = document.getElementById('label-container').childNodes[i];
-                    if (child) child.innerHTML = `${prediction[i].className}: <strong>${probabilityPercent}</strong>`;
-                    
-                    if (prediction[i].probability > highestPrediction.probability) {
-                        highestPrediction = prediction[i];
-                    }
-                }
-
-                console.log('Highest prediction (image):', highestPrediction);
-
-                const infoElement = document.getElementById("khoa-hoc-info");
-                if (highestPrediction.probability > 0.7) { 
-                    const animalName = String(highestPrediction.className || '').trim();
-                    const percent = (highestPrediction.probability * 100).toFixed(1);
-                    const keyRaw = animalName.toLowerCase();
-                    const keyStripped = stripDiacritics(keyRaw);
-
-                    let classInfo = infoMap[keyRaw] || infoMap[keyStripped] || "";
-
-                    if (classInfo) {
-                        infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
-                    } else {
-                        infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong>`;
-                    }
-
-                    showPopup(animalName, percent, classInfo);
-                } else {
-                    infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng chọn ảnh rõ ràng hơn.";
-                }
-            } catch (err) {
-                console.warn('Lỗi predictImageElement:', err);
-            }
-        }
-
-        // Vòng lặp cập nhật & predict (cho camera)
-        async function loop() {
-            if (!model) {
-                window.requestAnimationFrame(loop);
-                return;
-            }
-            try {
-                const source = videoElem;
-                if (source && !source.paused && !source.ended) {
-                    const prediction = await model.predict(source);
-                    let highestPrediction = { className: "Chưa rõ", probability: 0 };
-
-                    for (let i = 0; i < maxPredictions; i++) {
-                        const probabilityPercent = (prediction[i].probability * 100).toFixed(1) + "%";
-                        const child = document.getElementById('label-container').childNodes[i];
-                        if (child) child.innerHTML = `${prediction[i].className}: <strong>${probabilityPercent}</strong>`;
-                        
-                        if (prediction[i].probability > highestPrediction.probability) {
-                            highestPrediction = prediction[i];
-                        }
-                    }
-
-                    // DEBUG:
-                    console.log('Highest prediction (camera):', highestPrediction);
-
-                    const infoElement = document.getElementById("khoa-hoc-info");
-                    if (highestPrediction.probability > 0.7) { 
-                        const animalName = String(highestPrediction.className || '').trim();
-                        const percent = (highestPrediction.probability * 100).toFixed(1);
-                        const keyRaw = animalName.toLowerCase();
-                        const keyStripped = stripDiacritics(keyRaw);
-
-                        let classInfo = infoMap[keyRaw] || infoMap[keyStripped] || "";
-
-                        if (classInfo) {
-                            infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong><br>${classInfo}`;
-                        } else {
-                            infoElement.innerHTML = `<strong>Loài: ${animalName.toUpperCase()}</strong>`;
-                        }
-
-                        showPopup(animalName, percent, classInfo);
-                    } else {
-                        infoElement.innerHTML = "Đang chờ nhận dạng hoặc xác suất không đủ cao. Vui lòng đưa hình ảnh rõ ràng hơn vào camera.";
-                    }
-                }
-            } catch (err) {
-                console.warn('Lỗi predict:', err);
-            }
-            window.requestAnimationFrame(loop);
-        }
-
-        // dọn dẹp khi rời trang
-        window.addEventListener('beforeunload', stopCurrentStream);
-        window.addEventListener('pagehide', stopCurrentStream);
-    </script>
+/* ========== Cleanup ========== */
+window.addEventListener('beforeunload', stopCurrentStream);
+window.addEventListener('pagehide', stopCurrentStream);
+</script>
 
 </body>
 </html>
