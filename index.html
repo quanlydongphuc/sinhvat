@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>🔍 Thám tử Nhận dạng Động vật AI — nhanh & đầy đủ</title>
+  <title>🔍 Thám tử Nhận dạng Động vật AI</title>
 
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
@@ -88,7 +88,10 @@
     <div class="library">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3>Thư viện nhận dạng (chung)</h3>
-        <div><button id="library-refresh">Làm mới</button><button id="library-close" style="margin-left:8px">Đóng</button></div>
+        <div>
+          <!-- Removed "Làm mới" button as requested; only keep "Đóng" -->
+          <button id="library-close" style="margin-left:8px">Đóng</button>
+        </div>
       </div>
       <div id="library-list" style="margin-top:10px"></div>
     </div>
@@ -112,7 +115,6 @@ const libraryBtn = document.getElementById('library-button');
 const libraryOverlay = document.getElementById('library-overlay');
 const libraryList = document.getElementById('library-list');
 const libraryClose = document.getElementById('library-close');
-const libraryRefresh = document.getElementById('library-refresh');
 
 const popupOverlay = document.getElementById('popup-overlay');
 const popupClose = document.getElementById('popup-close');
@@ -342,8 +344,6 @@ const infoMap = {
   "sâu": "Sâu (ấu trùng côn trùng, ví dụ sâu bướm, sâu bọ) — Lớp: Côn trùng. 'Sâu' thường chỉ giai đoạn ấu trùng của bướm, bọ cánh mềm, bọ rầy... Chúng có thân mềm, ăn lá và mô thực vật, có vai trò cả tích cực (mồi cho chim, ký sinh) và tiêu cực (gây hại cây trồng). Môi trường: thực vật và môi trường trồng trọt. Sinh sản: phát triển qua biến thái; ấu trùng -> nhộng -> trưởng thành. Vai trò: thành phần quan trọng của chuỗi thức ăn; nhiều loài sâu là dịch hại nông nghiệp. Ghi chú: quản lý sâu hại dựa trên sinh thái học và kiểm soát sinh học."
 };
 
-
-
 /* ========== Popup helpers (ensure full text visible) ========== */
 let lastShownKey=null,lastShownTime=0,POPUP_MIN_INTERVAL_MS=4000;
 function showPopup(animalName, percent, infoText) {
@@ -520,7 +520,6 @@ function renderLibrary(items) {
 /* ========== UI handlers ========== */
 libraryBtn.addEventListener('click', ()=>{ libraryOverlay.classList.add('show'); libraryOverlay.setAttribute('aria-hidden','false'); loadLibraryOnce(); });
 libraryClose.addEventListener('click', ()=>{ libraryOverlay.classList.remove('show'); libraryOverlay.setAttribute('aria-hidden','true'); });
-libraryRefresh.addEventListener('click', loadLibraryOnce);
 
 /* ========== Camera prediction loop ========== */
 async function loop() {
