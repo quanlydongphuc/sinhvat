@@ -42,8 +42,31 @@
     .author-overlay.show{display:flex}
     .author-card{background:#fff;border-radius:12px;max-width:480px;width:100%;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,0.25);text-align:center;overflow:auto}
     .author-photo{width:100%;height:auto;border-radius:8px;object-fit:cover;max-height:360px}
+    /* Tăng margin-top để không quá sát ảnh */
     .author-info{margin-top:12px;text-align:left;color:#222;line-height:1.45}
-    .author-info b{display:inline-block;width:160px}
+
+    /* Thêm định dạng Flexbox cho mỗi dòng <p> */
+    .author-info p {
+      display: flex;        /* Kích hoạt Flexbox */
+      margin: 0 0 4px 0;    /* Giảm khoảng cách giữa các dòng */
+      padding: 2px 0;
+      line-height: 1.4;
+    }
+
+    /* Định dạng cho nhãn <b> */
+    .author-info b {
+      display: inline-block; /* Giữ inline-block cho tính chất khối */
+      min-width: 100px;      /* Đảm bảo chiều rộng tối thiểu cho các nhãn ngắn */
+      flex-shrink: 0;        /* Quan trọng: Ngăn nhãn bị thu hẹp */
+      font-weight: 600;
+      margin-right: 8px;     /* Khoảng cách giữa nhãn và giá trị */
+    }
+
+    /* Định dạng cho giá trị (phần văn bản không phải <b>) */
+    .author-info span.value {
+      flex-grow: 1;         /* Quan trọng: Cho phép giá trị chiếm hết phần còn lại */
+      word-break: break-word; /* Đảm bảo từ dài vẫn xuống dòng */
+    }
 
     @media(max-width:600px){.record{flex-direction:column;align-items:flex-start}button{width:100%}}
   </style>
@@ -109,17 +132,17 @@
   <!-- author popup -->
   <div id="author-overlay" class="author-overlay" aria-hidden="true">
     <div class="author-card" role="dialog" aria-modal="true" aria-labelledby="author-title">
-      <img id="author-photo" class="author-photo" src="tacgia.png" alt="Ảnh tác giả">
+      <img id="author-photo" class="author-photo" src="tacgia.jpg" alt="Ảnh tác giả">
       <!-- Note: replace src="author.jpg" with the real image path or hosted URL (Cloudinary/HTTP) -->
       <div class="author-info" id="author-info">
         <h3 id="author-title" style="margin:10px 0 8px;color:var(--primary-color)">Thông tin Tác giả</h3>
-        <p><b>Họ và tên:</b> Nguyễn Thị Thúy An</p>
-        <p><b>Năm sinh:</b> 17/06/1994</p>
-        <p><b>Quê quán:</b> Hòa Lộc, Hòa Lạc, An Giang</p>
-        <p><b>Đơn vị công tác:</b> Trường Tiểu học B Hòa Lạc, An Giang</p>
-        <p><b>Chức vụ:</b> Giáo viên chủ nhiệm lớp 4C</p>
-        <p><b>Tên đề tài:</b> "Thám tử AI - Nhận dạng Động vật"</p>
-        <p><b>Thời gian thực hiện đề tài:</b> tháng 10 năm 2025</p>
+        <p><b>Họ và tên:</b> <span class="value">Nguyễn Thị Thúy An</span></p>
+        <p><b>Năm sinh:</b> <span class="value">17/06/1994</span></p>
+        <p><b>Quê quán:</b> <span class="value">Hòa Lộc, Hòa Lạc, An Giang</span></p>
+        <p><b>Đơn vị công tác:</b> <span class="value">Trường Tiểu học B Hòa Lạc, An Giang</span></p>
+        <p><b>Chức vụ:</b> <span class="value">Giáo viên chủ nhiệm lớp 4C</span></p>
+        <p><b>Tên đề tài:</b> <span class="value">"Thám tử AI - Nhận dạng Động vật"</span></p>
+        <p><b>Thời gian thực hiện đề tài:</b> <span class="value">tháng 10 năm 2025</span></p>
       </div>
       <div style="text-align:right;margin-top:12px;">
         <button id="author-close" style="background:#6c757d;color:#fff;padding:8px 12px;border-radius:8px;border:0">Đóng</button>
