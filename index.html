@@ -34,18 +34,20 @@
     .library-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;z-index:10001;padding:20px;overflow:auto}
     .library-overlay.show{display:block}.library{background:#fff;border-radius:10px;max-width:900px;margin:30px auto;padding:14px}
     .record{display:flex;gap:12px;padding:10px;border-bottom:1px solid #eee;align-items:center}
-    /* Mặc định trên Desktop, giữ nguyên .h1-break là xuống dòng nếu cần */
-    .h1-break {
-      display: block;
-    }
+    .h1-break {display: block; /* Mặc định: Luôn xuống dòng */}
     
-    /* Thêm Media Query để áp dụng kiểu dáng cho Mobile (tối đa 600px) */
+    /* Áp dụng kiểu dáng cho Mobile (tối đa 600px) */
     @media (max-width: 600px) {
-      /* Loại bỏ xuống dòng và điều chỉnh kích thước chữ cho màn hình hẹp */
+      /* Giữ nguyên xuống dòng (display: block) nhưng giảm kích thước chữ */
       .h1-break {
-        display: inline; /* Quay lại inline để không bị xuống dòng */
+        display: block; /* Đảm bảo vẫn xuống dòng so với "Thám tử AI" */
         font-size: 0.7em; /* Giảm kích thước chữ (ví dụ: 70% kích thước chữ H1) */
-        margin-left: 5px; /* Thêm chút khoảng cách với "Thám tử AI" */
+        line-height: 1.2; /* Giảm khoảng cách dòng cho chữ nhỏ */
+      }
+    
+      /* Tùy chọn: Giảm kích thước chữ H1 chính một chút trên mobile nếu cần */
+      h1 {
+          font-size: 1.8em; 
       }
     }
     .record img{width:120px;height:auto;border-radius:8px;object-fit:cover}.record .meta{text-align:left;font-size:0.95em}.record .meta b{display:block;color:var(--primary-color)}
