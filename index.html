@@ -33,6 +33,17 @@
     .modal input{padding:8px;margin-top:6px;margin-bottom:12px;width:100%;border-radius:6px;border:1px solid #ddd}
     .library-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;z-index:10001;padding:20px;overflow:auto}
     .library-overlay.show{display:block}.library{background:#fff;border-radius:10px;max-width:900px;margin:30px auto;padding:14px}
+    /* START: Thêm CSS cho Header cố định */
+    .library-header {
+      position: sticky; /* Rất quan trọng: Giúp header dính vào đỉnh khi cuộn */
+      top: 0;           /* Dính vào đỉnh container (div.library) */
+      background: #fff; /* Đảm bảo nền trắng để nội dung cuộn bên dưới không bị nhìn thấy */
+      padding-bottom: 8px; /* Thêm chút khoảng cách với danh sách bên dưới */
+      z-index: 10003;   /* Đảm bảo nó luôn nằm trên (cao hơn library-overlay 10001, popup 9999) */
+      border-bottom: 1px solid #ddd; /* Đường kẻ dưới để phân tách rõ hơn */
+      padding-top: 5px; /* Thêm padding trên để cân đối */
+    }
+    /* END: Thêm CSS cho Header cố định */
     .record{display:flex;gap:12px;padding:10px;border-bottom:1px solid #eee;align-items:center}
     .h1-break {display: block; /* Mặc định: Luôn xuống dòng */}
     
@@ -110,7 +121,6 @@
     <div id="status-line" class="status">Sẵn sàng.</div>
   </div>
 
-  <!-- popup -->
   <div id="popup-overlay" class="popup-overlay" aria-hidden="true">
     <div class="popup">
       <h3 id="popup-title">LOÀI: ??? <span id="popup-percent" style="font-weight:700;color:var(--secondary-color);margin-left:6px;"></span></h3>
@@ -119,7 +129,6 @@
     </div>
   </div>
 
-  <!-- student modal -->
   <div id="student-modal" class="modal" aria-hidden="true">
     <div class="card">
       <h3>Nhập thông tin học sinh</h3>
@@ -131,24 +140,21 @@
     </div>
   </div>
 
-  <!-- library -->
   <div id="library-overlay" class="library-overlay" aria-hidden="true">
     <div class="library">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
+      <div class="library-header" style="display:flex;justify-content:space-between;align-items:center;">
         <h3>Thư viện nhận dạng (chung)</h3>
         <div>
           <button id="library-close" style="margin-left:8px">Đóng</button>
         </div>
       </div>
-      <div id="library-list" style="margin-top:10px"></div>
+      <div id="library-list"></div>
     </div>
   </div>
 
-  <!-- author popup -->
   <div id="author-overlay" class="author-overlay" aria-hidden="true">
     <div class="author-card" role="dialog" aria-modal="true" aria-labelledby="author-title">
       <img id="author-photo" class="author-photo" src="tacgia.jpg" alt="Ảnh tác giả">
-      <!-- Note: replace src="author.jpg" with the real image path or hosted URL (Cloudinary/HTTP) -->
       <div class="author-info" id="author-info">
         <h3 id="author-title" style="margin:10px 0 8px;color:var(--primary-color)">Thông tin Tác giả</h3>
         <p><b>Họ và tên:</b> <span class="value">Nguyễn Thị Thúy An</span></p>
@@ -480,8 +486,8 @@ const infoMap = {
   "ruoi": "Ruồi (Diptera) — Lớp: Côn trùng (Insecta). Ruồi đặc trưng bởi chỉ có một cặp cánh để bay (cặp cánh sau biến thành cơ quan thăng bằng halteres). Chúng có miệng liếm/hút. Môi trường sống: Khắp nơi — đô thị, nông thôn, rừng, rác thải. Chế độ ăn: Chất lỏng hữu cơ (thực phẩm, xác thối, phân); ấu trùng (dòi) ăn xác hữu cơ đang phân hủy. Sinh sản: Biến thái hoàn toàn; đẻ trứng trên chất hữu cơ đang phân hủy; ấu trùng phát triển nhanh. Vai trò: Phân hủy vật chất hữu cơ; truyền bệnh (do di chuyển giữa rác thải và thức ăn); là nguồn thức ăn cho nhện và chim. Ghi chú: Ruồi giấm được sử dụng rộng rãi trong nghiên cứu di truyền.",
 
   // Thỏ
-  "thỏ": "Thỏ (Leporidae) — Lớp: Động vật có vú (Mammalia) thuộc bộ Thỏ (Lagomorpha). Thỏ có tai dài, chân sau khỏe để nhảy, và răng cửa phát triển liên tục; chúng có một hệ thống tiêu hóa đặc biệt (cecum) để tiêu hóa xenlulozo. Môi trường sống: Đồng cỏ, rừng thưa, bụi rậm; sống trong hang (warren). Chế độ ăn: Ăn cỏ, thực vật, rễ cây (là động vật ăn cỏ). Sinh sản: Đẻ con; sinh sản nhanh và nhiều lứa trong năm; con non yếu ớt khi mới sinh (altricial). Vai trò: Động vật tiêu thụ sơ cấp, nguồn thức ăn quan trọng cho động vật săn mồi (cáo, đại bàng). Ghi chú: Thỏ được phân biệt với thỏ rừng (hare) bởi việc sinh con non yếu ớt.",
-  "tho": "Thỏ (Leporidae) — Lớp: Động vật có vú (Mammalia) thuộc bộ Thỏ (Lagomorpha). Thỏ có tai dài, chân sau khỏe để nhảy, và răng cửa phát triển liên tục; chúng có một hệ thống tiêu hóa đặc biệt (cecum) để tiêu hóa xenlulozo. Môi trường sống: Đồng cỏ, rừng thưa, bụi rậm; sống trong hang (warren). Chế độ ăn: Ăn cỏ, thực vật, rễ cây (là động vật ăn cỏ). Sinh sản: Đẻ con; sinh sản nhanh và nhiều lứa trong năm; con non yếu ớt khi mới sinh (altricial). Vai trò: Động vật tiêu thụ sơ cấp, nguồn thức ăn quan trọng cho động vật săn mồi (cáo, đại bàng). Ghi chú: Thỏ được phân biệt với thỏ rừng (hare) bởi việc sinh con non yếu ớt.",
+  "thỏ": "Thỏ (Leporidae) — Lớp: Động vật có vú (Mammalia) thuộc bộ Thỏ (Lagomorpha). Thỏ có tai dài, chân sau khỏe để nhảy, và răng cửa phát triển liên tục; chúng có một hệ thống tiêu hóa đặc biệt (cecum) để tiêu hóa xenlulozo. Môi trường sống: Đồng cỏ, rừng thưa, bụi rậm; sống trong hang (warren). Chế độ ăn: Ăn cỏ, thực vật, rễ cây (là động vật ăn cỏ). Sinh sản: Đẻ con, thường 1 con/lứa; con non yếu ớt khi mới sinh (altricial). Vai trò: Động vật tiêu thụ sơ cấp, nguồn thức ăn quan trọng cho động vật săn mồi (cáo, đại bàng). Ghi chú: Thỏ được phân biệt với thỏ rừng (hare) bởi việc sinh con non yếu ớt.",
+  "tho": "Thỏ (Leporidae) — Lớp: Động vật có vú (Mammalia) thuộc bộ Thỏ (Lagomorpha). Thỏ có tai dài, chân sau khỏe để nhảy, và răng cửa phát triển liên tục; chúng có một hệ thống tiêu hóa đặc biệt (cecum) để tiêu hóa xenlulozo. Môi trường sống: Đồng cỏ, rừng thưa, bụi rậm; sống trong hang (warren). Chế độ ăn: Ăn cỏ, thực vật, rễ cây (là động vật ăn cỏ). Sinh sản: Đẻ con, thường 1 con/lứa; con non yếu ớt khi mới sinh (altricial). Vai trò: Động vật tiêu thụ sơ cấp, nguồn thức ăn quan trọng cho động vật săn mồi (cáo, đại bàng). Ghi chú: Thỏ được phân biệt với thỏ rừng (hare) bởi việc sinh con non yếu ớt.",
 
   // Tôm
   "tôm": "Tôm (Dendrobranchiata, Caridea, và các nhóm liên quan) — Lớp: Giáp xác (Malacostraca) thuộc ngành Động vật chân đốt. Tôm có cơ thể dài, dẹt bên, được bảo vệ bởi vỏ kitin; có nhiều cặp chân bơi và râu dài. Môi trường sống: Biển (nước mặn) và nước ngọt (sông, hồ). Chế độ ăn: Ăn tạp — xác hữu cơ, tảo, động vật không xương sống nhỏ. Sinh sản: Đẻ trứng; trứng nở ra thành ấu trùng bơi lội (nauplius) và phát triển qua nhiều giai đoạn. Vai trò: Phân hủy hữu cơ, lọc nước (tôm biển nhỏ); là nguồn thực phẩm quan trọng. Ghi chú: Kích thước từ rất nhỏ (tôm krill) đến lớn (tôm sú, tôm hùm).",
