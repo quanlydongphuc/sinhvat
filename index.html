@@ -42,6 +42,9 @@
       z-index: 10003;   /* Đảm bảo nó luôn nằm trên (cao hơn library-overlay 10001, popup 9999) */
       border-bottom: 1px solid #ddd; /* Đường kẻ dưới để phân tách rõ hơn */
       padding-top: 5px; /* Thêm padding trên để cân đối */
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
     }
     /* END: Thêm CSS cho Header cố định */
     .record{display:flex;gap:12px;padding:10px;border-bottom:1px solid #eee;align-items:center}
@@ -94,6 +97,20 @@
       word-break: break-word; /* Đảm bảo từ dài vẫn xuống dòng */
     }
 
+    /* Style cho số thứ tự trong thư viện */
+    .record .index {
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      background:#f1f1f1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      color:var(--primary-color);
+      flex-shrink:0;
+    }
+
     @media(max-width:600px){.record{flex-direction:column;align-items:flex-start}button{width:100%}}
   </style>
 </head>
@@ -143,7 +160,7 @@
   <div id="library-overlay" class="library-overlay" aria-hidden="true">
     <div class="library">
       <div class="library-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <h3>Thư viện nhận dạng (chung)</h3>
+        <h3 id="library-count">Tổng: 0</h3>
         <div>
           <button id="library-close" style="margin-left:8px">Đóng</button>
         </div>
@@ -190,6 +207,7 @@ const authorBtn = document.getElementById('author-button');
 const libraryOverlay = document.getElementById('library-overlay');
 const libraryList = document.getElementById('library-list');
 const libraryClose = document.getElementById('library-close');
+const libraryCount = document.getElementById('library-count');
 
 const authorOverlay = document.getElementById('author-overlay');
 const authorClose = document.getElementById('author-close');
@@ -641,22 +659,35 @@ async function uploadToCloudinaryAndSave(fileOrBlob, resultName, resultProb, raw
 /* ========== Library load & render ========== */
 async function loadLibraryOnce() {
   libraryList.innerHTML = '<p>Đang tải...</p>';
+  libraryCount.textContent = 'Tổng: ...';
   try {
     const res = await fetch(APPS_SCRIPT_URL, { method: 'GET' });
-    if (!res.ok) { const t = await res.text(); console.error('Load library error', res.status, t); libraryList.innerHTML = '<p>Không thể tải thư viện (xem console).</p>'; return; }
+    if (!res.ok) { const t = await res.text(); console.error('Load library error', res.status, t); libraryList.innerHTML = '<p>Không thể tải thư viện (xem console).</p>'; libraryCount.textContent = 'Tổng: 0'; return; }
     const data = await res.json();
     renderLibrary(data || []);
   } catch (err) {
     console.error('loadLibraryOnce error', err);
     libraryList.innerHTML = '<p>Không thể tải thư viện (xem console).</p>';
+    libraryCount.textContent = 'Tổng: 0';
   }
 }
 function renderLibrary(items) {
   libraryList.innerHTML = '';
-  if (!items || items.length === 0) { libraryList.innerHTML = '<p>KHÔNG CÓ BẢN GHI</p>'; return; }
-  items.forEach(item => {
+  if (!items || items.length === 0) { libraryList.innerHTML = '<p>KHÔNG CÓ BẢN GHI</p>'; libraryCount.textContent = 'Tổng: 0'; return; }
+  // update total count in header
+  libraryCount.textContent = 'Tổng: ' + items.length;
+
+  items.forEach((item, idx) => {
     const rec = document.createElement('div'); rec.className='record';
-    const img = document.createElement('img'); img.src = item.image_url || ''; rec.appendChild(img);
+    // index badge
+    const idxBadge = document.createElement('div');
+    idxBadge.className = 'index';
+    idxBadge.textContent = (idx + 1);
+    rec.appendChild(idxBadge);
+
+    const img = document.createElement('img'); img.src = item.image_url || ''; img.alt = item.result_name || ('Sinh vật ' + (idx+1));
+    rec.appendChild(img);
+
     const meta = document.createElement('div'); meta.className='meta';
     const dateText = item.created_at ? new Date(item.created_at).toLocaleString() : '';
     meta.innerHTML = `<b>${item.result_name || 'Không rõ'}</b>
